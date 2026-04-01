@@ -267,7 +267,7 @@ writeup_type: icbinb       # "icbinb"（4 页）或 "icml"（8 页）
 
 ## 许可证
 
-本项目改编自 Sakana AI 的 [AI-Scientist-v2](https://github.com/SakanaAI/AI-Scientist) 的研究流程设计。有关许可条款请参阅原始仓库。
+本项目是 Sakana AI 的 [AI-Scientist-v2](https://github.com/SakanaAI/AI-Scientist) 的衍生作品，采用 [AI Scientist Source Code License](LICENSE) 分发。完整条款见 [LICENSE](LICENSE)。
 
 ## 致谢
 

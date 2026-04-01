@@ -267,7 +267,7 @@ writeup_type: icbinb       # "icbinb" (4-page) or "icml" (8-page)
 
 ## License
 
-This project adapts the research pipeline design from [AI-Scientist-v2](https://github.com/SakanaAI/AI-Scientist) by Sakana AI. Refer to the original repository for its license terms.
+This project is a derivative work of [AI-Scientist-v2](https://github.com/SakanaAI/AI-Scientist) by Sakana AI, distributed under the [AI Scientist Source Code License](LICENSE). See [LICENSE](LICENSE) for full terms.
 
 ## Acknowledgments
 
