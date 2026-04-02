@@ -90,7 +90,7 @@ pip install -r requirements.txt
 
 **Option C — Cross-agent** (Codex CLI, Cursor, Gemini CLI, etc.):
 
-The `.agents/skills/` directory follows the [Agent Skills](https://agentskills.io) open standard. Clone the repo into your project or home directory — any compliant agent will auto-discover the skills.
+The `.agents/skills/` directory follows the [Agent Skills](https://agentskills.io) open standard. Clone the repo into your project or home directory — any compliant agent will auto-discover the skills. Note: skill names will not have the `ai-scientist:` prefix in non-Claude-Code agents (e.g., `/workshop` instead of `/ai-scientist:workshop`).
 
 ### Verify
 
