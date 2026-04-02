@@ -7,6 +7,7 @@ Run after cloning to ensure the environment is ready:
 from __future__ import annotations
 
 import importlib
+import os
 import platform
 import re
 import shutil
@@ -110,6 +111,17 @@ def check_latex() -> tuple[bool, bool]:
     return pdflatex is not None, bibtex is not None
 
 
+def check_s2_api() -> bool:
+    """Check Semantic Scholar API availability."""
+    has_key = bool(os.environ.get("S2_API_KEY"))
+    if has_key:
+        print(f"  {CHECK} S2_API_KEY is set")
+    else:
+        print(f"  {WARN} S2_API_KEY not set — citation search will fall back to WebSearch")
+        print(f"      Get a free key at https://www.semanticscholar.org/product/api#api-key")
+    return has_key
+
+
 def check_claude_code() -> bool:
     claude = shutil.which("claude")
     if claude:
@@ -150,6 +162,11 @@ def main():
     if not pdf_ok or not bib_ok:
         warnings += 1
         print(f"  {WARN} LaTeX is needed for paper writeup (skip with --skip-writeup)")
+
+    # Literature search
+    print("\n[Literature Search]")
+    if not check_s2_api():
+        warnings += 1
 
     # Claude Code
     print("\n[Claude Code]")

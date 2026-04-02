@@ -12,7 +12,7 @@ You are writing a complete research paper based on experiment results.
 
 - `--exp-dir <path>`: Experiment directory (required)
 - `--type <icbinb|icml>`: Paper template type — icbinb (4-page workshop) or icml (8-page, default: icbinb)
-- `--cite-rounds <N>`: Number of citation gathering rounds (default: 20)
+- `--cite-rounds <N>`: Number of citation gathering rounds (default: 5)
 - `--reflections <N>`: Number of writeup reflection rounds (default: 3)
 
 Parse from the user's message.
@@ -56,16 +56,24 @@ ln -sf ../../figures <exp_dir>/latex/figures 2>/dev/null || cp -r <exp_dir>/figu
 
 ### 3. Gather Citations (up to cite-rounds iterations)
 
+First, check search backend availability:
+```bash
+python3 tools/search.py check
+```
+
+If S2 API is unreachable or rate-limited, **use WebSearch exclusively** for all citation searches below. Do not waste rounds retrying a broken S2 backend.
+
 For each round:
 
-1. Identify what citations are still needed based on the paper content so far
-2. Search for relevant papers:
+1. Identify sections with uncited claims (look for statements without `\cite{}`)
+2. Formulate 2-3 targeted search queries for the needed citations
+3. Search for papers — try S2 first, fall back to WebSearch immediately on failure:
    ```bash
    python3 tools/search.py "<citation query>" --limit 5 --json
    ```
-   If S2 is unavailable, use WebSearch to find papers on arxiv.org or scholar.google.com.
+   If this returns no results or exits with error, use **WebSearch** to search `arxiv.org`, `scholar.google.com`, or `semanticscholar.org` directly. Extract title, authors, year, venue from the search results.
 
-3. For each relevant paper found, extract or construct a BibTeX entry and append to `references.bib`:
+4. For each relevant paper, add a BibTeX entry to `references.bib`:
    ```bash
    cat >> <exp_dir>/latex/references.bib << 'BIB_EOF'
    @article{authorYYYYkeyword,
@@ -77,28 +85,11 @@ For each round:
    BIB_EOF
    ```
 
-4. Ensure no duplicate citation keys. Clean citation keys:
-   - Lowercase, no accents, no special characters except `_:-@{},`
+5. Update the paper text with `\cite{key}` for the added reference.
 
-5. **Validate citations** — ensure no hallucinated references:
-   - Every `\cite{key}` in the paper must have a matching entry in `references.bib`
-   - Every BibTeX entry should come from a real search result (not fabricated)
-   - Check for duplicate keys and merge if needed
+6. **Validate** — every `\cite{key}` must have a matching `references.bib` entry. No fabricated references.
 
-Stop gathering when you have sufficient citations (typically 15-30 for a workshop paper, 30-50 for a full paper) or all rounds are exhausted.
-
-**Citation Workflow Summary**:
-```
-For each round (1 to cite_rounds):
-  1. Read current paper text
-  2. Identify sections that need citations (claims without \cite{})
-  3. For each uncited claim, formulate a search query
-  4. Search via tools/search.py (S2 with bibtex) or WebSearch
-  5. Select most relevant paper from results
-  6. Extract/construct BibTeX entry
-  7. Add to references.bib (skip if key already exists)
-  8. Update paper text with \cite{key}
-```
+**Stop early** when all major claims are cited (typically 10-20 for a workshop paper, 20-35 for a full paper). Do not force all rounds if citations are sufficient.
 
 ### 4. View and Describe Figures (VLM Review)
 

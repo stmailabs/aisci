@@ -59,7 +59,7 @@ agent:
 
 # ── Paper writeup ────────────────────────────────────────────────────────────
 writeup_type: icbinb       # "icbinb" (4-page) or "icml" (8-page)
-num_cite_rounds: 20
+num_cite_rounds: 5
 num_writeup_reflections: 3
 
 # ── Pipeline control ─────────────────────────────────────────────────────────

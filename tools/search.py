@@ -152,26 +152,51 @@ def format_papers_json(papers: List[Dict], max_papers: int = 10) -> str:
 # ── Unified search entry point ───────────────────────────────────────────────
 
 
+def check_s2_api() -> Dict:
+    """Check Semantic Scholar API availability and return status info."""
+    result = {"has_key": has_s2_api_key(), "reachable": False, "rate_limited": False}
+    try:
+        headers = {}
+        api_key = os.getenv("S2_API_KEY")
+        if api_key:
+            headers["X-API-KEY"] = api_key
+        rsp = requests.get(
+            f"{S2_API_BASE}/paper/search",
+            headers=headers,
+            params={"query": "test", "limit": 1, "fields": "title"},
+            timeout=10,
+        )
+        if rsp.status_code == 200:
+            result["reachable"] = True
+        elif rsp.status_code == 429:
+            result["reachable"] = True
+            result["rate_limited"] = True
+        else:
+            result["error"] = f"HTTP {rsp.status_code}"
+    except Exception as e:
+        result["error"] = str(e)
+    return result
+
+
 def search_papers(query: str, limit: int = 10) -> Optional[List[Dict]]:
     """Search for papers using the best available backend.
 
-    Uses Semantic Scholar if S2_API_KEY is set; otherwise returns None
-    (the caller — typically a Claude Code skill — should fall back to WebSearch).
+    Tries Semantic Scholar first. On failure (rate limit, network error,
+    no results), returns None so the caller can fall back to WebSearch.
     """
-    if has_s2_api_key():
-        return search_papers_s2(query, limit=limit, include_bibtex=True)
-
-    # Attempt without key (lower rate limits)
     try:
-        return search_papers_s2(query, limit=limit, include_bibtex=True)
+        papers = search_papers_s2(query, limit=limit, include_bibtex=True)
+        if papers:
+            return papers
     except requests.exceptions.HTTPError as e:
-        if e.response is not None and e.response.status_code == 429:
-            warnings.warn(
-                "S2 rate limited and no S2_API_KEY set. "
-                "The skill should use WebSearch as fallback."
-            )
-            return None
-        raise
+        status = e.response.status_code if e.response is not None else None
+        if status == 429:
+            print("S2 rate limited — use WebSearch as fallback.", file=sys.stderr)
+        else:
+            print(f"S2 error (HTTP {status}) — use WebSearch as fallback.", file=sys.stderr)
+    except Exception as e:
+        print(f"S2 unavailable ({e}) — use WebSearch as fallback.", file=sys.stderr)
+    return None
 
 
 # ── CLI ──────────────────────────────────────────────────────────────────────
@@ -180,18 +205,41 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Search academic papers")
-    parser.add_argument("query", type=str, help="Search query")
+    sub = parser.add_subparsers(dest="command")
+
+    # Default: search (also works without subcommand for backward compat)
+    parser.add_argument("query", nargs="?", type=str, help="Search query")
     parser.add_argument("--limit", type=int, default=10, help="Max results")
     parser.add_argument(
         "--json", action="store_true", dest="as_json", help="Output as JSON"
     )
+
+    # check: test S2 API connectivity
+    sub.add_parser("check", help="Check S2 API availability")
+
     args = parser.parse_args()
 
-    papers = search_papers(args.query, limit=args.limit)
-    if papers:
-        if args.as_json:
-            print(format_papers_json(papers, max_papers=args.limit))
+    if args.command == "check":
+        status = check_s2_api()
+        print(json.dumps(status, indent=2))
+        if not status["reachable"]:
+            print("\nS2 API is not reachable. Citation search will use WebSearch.", file=sys.stderr)
+        elif status["rate_limited"] and not status["has_key"]:
+            print("\nS2 API is rate-limited without API key.", file=sys.stderr)
+            print("Set S2_API_KEY for reliable citation search, or rely on WebSearch.", file=sys.stderr)
+        elif status["has_key"] and status["reachable"]:
+            print("\nS2 API is ready with API key.", file=sys.stderr)
         else:
-            print(format_papers_for_context(papers, max_papers=args.limit))
+            print("\nS2 API is reachable (no key, lower rate limits).", file=sys.stderr)
+    elif args.query:
+        papers = search_papers(args.query, limit=args.limit)
+        if papers:
+            if args.as_json:
+                print(format_papers_json(papers, max_papers=args.limit))
+            else:
+                print(format_papers_for_context(papers, max_papers=args.limit))
+        else:
+            print("No results from S2. Use WebSearch as fallback.", file=sys.stderr)
+            sys.exit(1)
     else:
-        print("No papers found. Try using WebSearch as fallback.")
+        parser.print_help()
