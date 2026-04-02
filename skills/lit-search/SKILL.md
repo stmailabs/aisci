@@ -18,7 +18,7 @@ The user's message contains the search query. Extract it and search for relevant
 
 2. **Try Semantic Scholar first** by running:
    ```
-   python tools/search.py "<query>" --limit 10 --json
+   python3 tools/search.py "<query>" --limit 10 --json
    ```
    This uses the S2 API (with or without `S2_API_KEY`).
 

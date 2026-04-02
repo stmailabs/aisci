@@ -36,21 +36,30 @@ Parse from the user's message. At minimum, `--workshop` or `--idea` or `--exp-di
 
 ### Phase 0: Setup
 
-1. **Detect device**:
+1. **Verify environment**:
    ```bash
-   python tools/device_utils.py --info
+   python3 tools/verify_setup.py
+   ```
+   If this fails (missing dependencies, wrong Python version, etc.), **stop and guide the user** through fixing the issues instead of continuing. Common problems:
+   - `python: command not found` → tell the user to use `python3` or activate a virtualenv
+   - `TypeError: unsupported operand type(s) for |` → Python version is below 3.10, tell user to install Python 3.11+
+   - Missing packages → tell user to run `pip install -r requirements.txt`
+
+2. **Detect device**:
+   ```bash
+   python3 tools/device_utils.py --info
    ```
 
-2. **Load configuration**:
+3. **Load configuration**:
    ```bash
-   python tools/config.py --config <config_path>
+   python3 tools/config.py --config <config_path>
    ```
 
-3. **Check prerequisites**:
+4. **Check LaTeX** (optional, only needed for writeup):
    ```bash
-   python tools/latex_compiler.py check
+   python3 tools/latex_compiler.py check
    ```
-   Warn if pdflatex or bibtex is missing (needed for writeup phase).
+   Warn if pdflatex or bibtex is missing — the experiment can still run, paper generation will be skipped.
 
 ### Phase 1: Ideation
 
@@ -67,7 +76,7 @@ This generates a JSON file with research ideas.
 
 If multiple ideas exist, select the one at `--idea-idx`:
 ```bash
-python -c "
+python3 -c "
 import json
 ideas = json.load(open('<ideas_json_path>'))
 idea = ideas[<idea_idx>]
@@ -174,5 +183,5 @@ The pipeline supports resuming at any phase:
 - For a quick test run, use `--config` with reduced iterations:
   ```bash
   # Create a test config with fewer iterations
-  python tools/config.py --set agent.stages.stage1_max_iters=5 agent.stages.stage2_max_iters=3 agent.stages.stage3_max_iters=3 agent.stages.stage4_max_iters=3
+  python3 tools/config.py --set agent.stages.stage1_max_iters=5 agent.stages.stage2_max_iters=3 agent.stages.stage3_max_iters=3 agent.stages.stage4_max_iters=3
   ```

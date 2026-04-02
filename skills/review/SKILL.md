@@ -21,12 +21,12 @@ Parse from the user's message.
 ### 1. Extract Paper Text
 
 ```bash
-python tools/pdf_reader.py <pdf_path>
+python3 tools/pdf_reader.py <pdf_path>
 ```
 
 If the paper is long, also extract by sections:
 ```bash
-python tools/pdf_reader.py <pdf_path> --sections
+python3 tools/pdf_reader.py <pdf_path> --sections
 ```
 
 ### 2. Load Review Examples

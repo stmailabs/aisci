@@ -32,7 +32,7 @@ Parse these from the user's message.
 
 If no `--exp-dir` is provided (new experiment):
 ```bash
-python -c "
+python3 -c "
 import json, sys
 sys.path.insert(0, '.')
 from tools.state_manager import init_experiment
@@ -47,7 +47,7 @@ print(exp_dir)
 
 If `--exp-dir` is provided (resume):
 ```bash
-python -c "
+python3 -c "
 import json, sys
 sys.path.insert(0, '.')
 from tools.state_manager import load_experiment_state
@@ -58,12 +58,12 @@ print(json.dumps(state, indent=2))
 
 ### 2. Detect Device
 ```bash
-python tools/device_utils.py --info
+python3 tools/device_utils.py --info
 ```
 
 ### 3. Load Config
 ```bash
-python tools/config.py --config <config_path>
+python3 tools/config.py --config <config_path>
 ```
 
 Read configuration values:
@@ -113,7 +113,7 @@ Repeat until stage completion (max_iters reached or completion criteria met):
 
 1. **Select candidate nodes** for expansion:
    ```bash
-   python -c "
+   python3 -c "
    import json, sys
    sys.path.insert(0, '.')
    from tools.state_manager import load_journal, get_nodes_for_expansion
@@ -136,7 +136,7 @@ Repeat until stage completion (max_iters reached or completion criteria met):
 
    **Stage 1 completion**: At least 1 good (non-buggy) node exists.
    ```bash
-   python -c "
+   python3 -c "
    import json, sys
    sys.path.insert(0, '.')
    from tools.state_manager import load_journal, get_good_nodes
@@ -154,7 +154,7 @@ Repeat until stage completion (max_iters reached or completion criteria met):
 
 4. **Save progress** after each batch:
    ```bash
-   python -c "
+   python3 -c "
    import json, sys
    sys.path.insert(0, '.')
    from tools.state_manager import load_journal, save_best_solution, get_journal_summary
@@ -191,7 +191,7 @@ When a stage completes:
 
 1. Save the best solution:
    ```bash
-   python -c "
+   python3 -c "
    import json, sys
    sys.path.insert(0, '.')
    from tools.state_manager import load_journal, get_best_node, save_best_solution, transition_stage
@@ -214,7 +214,7 @@ After all 4 stages complete:
 
 1. Print final summary:
    ```bash
-   python -c "
+   python3 -c "
    import json, sys
    sys.path.insert(0, '.')
    from tools.state_manager import load_experiment_state, load_journal, get_journal_summary
@@ -234,7 +234,7 @@ After all 4 stages complete:
 
 3. Update experiment state:
    ```bash
-   python -c "
+   python3 -c "
    import json, sys
    sys.path.insert(0, '.')
    from tools.state_manager import update_experiment_state

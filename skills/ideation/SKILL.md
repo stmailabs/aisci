@@ -43,7 +43,7 @@ Think of a novel research direction within the workshop scope. Consider:
 
 Before finalizing, search for related work to check novelty:
 ```bash
-python tools/search.py "<your proposed topic keywords>" --limit 10 --json
+python3 tools/search.py "<your proposed topic keywords>" --limit 10 --json
 ```
 
 If S2 returns no results, use the WebSearch tool to search `arxiv.org` for related papers.
@@ -96,7 +96,7 @@ Collect all ideas into a JSON array and save to the output file:
 
 Also validate against the schema:
 ```bash
-python -c "
+python3 -c "
 import json
 with open('templates/idea_schema.json') as f:
     schema = json.load(f)

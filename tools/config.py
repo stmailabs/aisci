@@ -1,5 +1,7 @@
 """Configuration loading and defaults for AI Scientist experiments."""
 
+from __future__ import annotations
+
 import argparse
 import json
 import sys

@@ -27,7 +27,7 @@ Read the experiment artifacts:
 cat <exp_dir>/idea.md
 
 # Experiment state
-python -c "
+python3 -c "
 import json, sys
 sys.path.insert(0, '.')
 from tools.state_manager import load_experiment_state
@@ -41,7 +41,7 @@ Read the best experiment code from the final completed stage. Read stage summari
 ### 2. Setup LaTeX Directory
 
 ```bash
-python tools/latex_compiler.py setup <exp_dir>/latex --type <icbinb|icml>
+python3 tools/latex_compiler.py setup <exp_dir>/latex --type <icbinb|icml>
 ```
 
 Create empty references file:
@@ -61,7 +61,7 @@ For each round:
 1. Identify what citations are still needed based on the paper content so far
 2. Search for relevant papers:
    ```bash
-   python tools/search.py "<citation query>" --limit 5 --json
+   python3 tools/search.py "<citation query>" --limit 5 --json
    ```
    If S2 is unavailable, use WebSearch to find papers on arxiv.org or scholar.google.com.
 
@@ -152,12 +152,12 @@ Same structure plus:
 ### 6. Compile and Check
 
 ```bash
-python tools/latex_compiler.py compile <exp_dir>/latex --main template.tex
+python3 tools/latex_compiler.py compile <exp_dir>/latex --main template.tex
 ```
 
 Check for errors:
 ```bash
-python tools/latex_compiler.py pages <exp_dir>/latex/template.pdf
+python3 tools/latex_compiler.py pages <exp_dir>/latex/template.pdf
 ```
 
 If there are LaTeX errors, read the log file and fix them:

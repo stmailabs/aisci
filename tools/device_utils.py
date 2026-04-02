@@ -3,6 +3,8 @@
 Supports CUDA, MPS (Apple Silicon), and CPU fallback.
 """
 
+from __future__ import annotations
+
 import subprocess
 import sys
 import json

@@ -25,17 +25,17 @@ This project provides a complete AI research automation pipeline as Claude Code 
 
 ## Tool Usage
 
-All tools are invoked via `python tools/<module>.py` from the project root:
+All tools are invoked via `python3 tools/<module>.py` from the project root:
 
 ```bash
-python tools/verify_setup.py              # Verify all prerequisites
-python tools/device_utils.py              # Detect CUDA/MPS/CPU
-python tools/search.py "query"            # Search papers (S2 API)
-python tools/state_manager.py status DIR  # Check experiment state
-python tools/metric_parser.py FILE        # Parse metrics from output
-python tools/latex_compiler.py compile DIR # Compile LaTeX to PDF
-python tools/pdf_reader.py FILE           # Extract PDF text
-python tools/config.py --config FILE      # Load/display config
+python3 tools/verify_setup.py              # Verify all prerequisites
+python3 tools/device_utils.py              # Detect CUDA/MPS/CPU
+python3 tools/search.py "query"            # Search papers (S2 API)
+python3 tools/state_manager.py status DIR  # Check experiment state
+python3 tools/metric_parser.py FILE        # Parse metrics from output
+python3 tools/latex_compiler.py compile DIR # Compile LaTeX to PDF
+python3 tools/pdf_reader.py FILE           # Extract PDF text
+python3 tools/config.py --config FILE      # Load/display config
 ```
 
 ## Environment

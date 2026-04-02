@@ -25,7 +25,7 @@ Parse these from the user's message or arguments.
 
 ```bash
 # Load experiment state and journal
-python -c "
+python3 -c "
 import json, sys
 sys.path.insert(0, '.')
 from tools.state_manager import load_journal, get_node_by_id
@@ -39,12 +39,12 @@ If a parent node ID is provided, read the parent node's code, metrics, analysis,
 ### 2. Detect Device
 
 ```bash
-python tools/device_utils.py
+python3 tools/device_utils.py
 ```
 
 Read the detected device and get the device preamble:
 ```bash
-python tools/device_utils.py --preamble
+python3 tools/device_utils.py --preamble
 ```
 
 ### 3. Generate Experiment Code
@@ -125,7 +125,7 @@ cd <exp_dir>/workspace && timeout 3600 python runfile.py 2>&1 | tee <exp_dir>/lo
 
 Then parse metrics:
 ```bash
-python tools/metric_parser.py <exp_dir>/logs/step_<N>_output.txt --json
+python3 tools/metric_parser.py <exp_dir>/logs/step_<N>_output.txt --json
 ```
 
 ### 6. Analyze Plots
@@ -154,7 +154,7 @@ A node is **not buggy** if:
 ### 8. Save Node to Journal
 
 ```bash
-python -c "
+python3 -c "
 import json, sys, time
 sys.path.insert(0, '.')
 from tools.state_manager import load_journal, create_node, add_node, save_journal

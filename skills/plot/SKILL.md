@@ -20,7 +20,7 @@ Parse from the user's message.
 
 Read the experiment state and gather all stage summaries:
 ```bash
-python -c "
+python3 -c "
 import json, sys, os
 sys.path.insert(0, '.')
 from tools.state_manager import load_experiment_state, load_journal, get_best_node, get_journal_summary

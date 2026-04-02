@@ -4,6 +4,8 @@ Wraps pdflatex + bibtex for paper generation.
 Cross-platform: works on Mac (BasicTeX/MacTeX) and Linux (texlive).
 """
 
+from __future__ import annotations
+
 import os
 import shutil
 import subprocess

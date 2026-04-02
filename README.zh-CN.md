@@ -95,7 +95,7 @@ pip install -r requirements.txt
 ### 验证环境
 
 ```bash
-python tools/verify_setup.py
+python3 tools/verify_setup.py
 ```
 
 一键检查 Python 版本、全部依赖、PyTorch 设备、LaTeX 工具和 Claude Code CLI。
@@ -206,7 +206,7 @@ claude "/ai-scientist --workshop examples/ideas/i_cant_believe_its_not_better.md
 
 ## Python 工具
 
-所有工具通过 `python tools/<module>.py` 在项目根目录调用。
+所有工具通过 `python3 tools/<module>.py` 在项目根目录调用。
 
 | 工具 | 用途 |
 |------|------|
