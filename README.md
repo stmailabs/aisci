@@ -81,6 +81,14 @@ cd ai-scientist-skills
 pip install -r requirements.txt
 ```
 
+### Verify
+
+```bash
+python tools/verify_setup.py
+```
+
+Checks Python version, all dependencies, PyTorch device, LaTeX tools, and Claude Code CLI in one go.
+
 ### Run
 
 ```bash

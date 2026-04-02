@@ -28,6 +28,7 @@ This project provides a complete AI research automation pipeline as Claude Code 
 All tools are invoked via `python tools/<module>.py` from the project root:
 
 ```bash
+python tools/verify_setup.py              # Verify all prerequisites
 python tools/device_utils.py              # Detect CUDA/MPS/CPU
 python tools/search.py "query"            # Search papers (S2 API)
 python tools/state_manager.py status DIR  # Check experiment state

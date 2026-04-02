@@ -81,6 +81,14 @@ cd ai-scientist-skills
 pip install -r requirements.txt
 ```
 
+### 验证环境
+
+```bash
+python tools/verify_setup.py
+```
+
+一键检查 Python 版本、全部依赖、PyTorch 设备、LaTeX 工具和 Claude Code CLI。
+
 ### 运行
 
 ```bash
