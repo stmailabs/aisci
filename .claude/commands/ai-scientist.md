@@ -1,0 +1,1 @@
+../../skills/ai-scientist/SKILL.md

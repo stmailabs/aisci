@@ -1,0 +1,1 @@
+../../skills/writeup/SKILL.md
