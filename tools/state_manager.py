@@ -1,11 +1,7 @@
 """Experiment state management — JSON-based journal and tree persistence.
 
-Replaces the in-memory Journal/Node system from AI-Scientist-v2 with a
-file-based approach suitable for Claude Code skills that run across
+File-based approach suitable for Claude Code skills that run across
 multiple invocations.
-
-Faithfully mirrors the Node schema from:
-  AI-Scientist-v2/ai_scientist/treesearch/journal.py
 """
 
 import json
@@ -195,7 +191,6 @@ def get_good_nodes(journal: Dict) -> List[Dict]:
 def get_best_node(journal: Dict) -> Optional[Dict]:
     """Return the best non-buggy node by metric comparison.
 
-    Uses the metric comparison logic from the original MetricValue class.
     Falls back to the most recent good node if metrics are not comparable.
     """
     good = get_good_nodes(journal)
@@ -215,7 +210,6 @@ def get_best_node(journal: Dict) -> Optional[Dict]:
 def _metric_is_better(a: Optional[Dict], b: Optional[Dict]) -> bool:
     """Check if metric *a* is better than metric *b*.
 
-    Mirrors MetricValue.__gt__ from the original codebase.
     Supports both simple {value, maximize} and the new {metric_names: [...]} format.
     """
     if a is None:
@@ -284,7 +278,7 @@ def get_nodes_for_expansion(
 ) -> List[Dict]:
     """Select candidate parent nodes for expansion.
 
-    Mirrors the BFTS node selection logic from the original ParallelAgent.
+    Selects candidate parent nodes using the BFTS node selection logic.
     """
     import random
 

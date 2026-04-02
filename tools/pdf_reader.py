@@ -1,7 +1,6 @@
 """PDF text extraction for paper review.
 
-Adapted from AI-Scientist-v2's perform_llm_review.py which uses
-pypdf and pymupdf4llm for text extraction.
+Uses pymupdf4llm and pypdf for text extraction.
 """
 
 import json

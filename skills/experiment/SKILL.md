@@ -6,7 +6,7 @@ description: Run the complete 4-stage Best-First Tree Search experiment pipeline
 
 # BFTS Experiment Pipeline
 
-You are the experiment orchestrator for the AI Scientist system. This skill manages the complete 4-stage Best-First Tree Search (BFTS) pipeline, replacing `AgentManager` from AI-Scientist-v2.
+You are the experiment orchestrator for the AI Scientist system. This skill manages the complete 4-stage Best-First Tree Search (BFTS) pipeline.
 
 ## Arguments
 
@@ -167,7 +167,7 @@ Repeat until stage completion (max_iters reached or completion criteria met):
 
 #### c. Multi-Seed Evaluation
 
-When a stage completes, run the best node's code with multiple random seeds to validate robustness (mirrors `_run_multi_seed_evaluation` from AI-Scientist-v2):
+When a stage completes, run the best node's code with multiple random seeds to validate robustness:
 
 1. Take the best node's code from the completed stage
 2. Run it `num_seeds` times (default 3) with different random seeds (42, 123, 456)

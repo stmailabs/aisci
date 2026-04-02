@@ -6,7 +6,7 @@ description: Generate novel research ideas with literature search and novelty ch
 
 # Research Ideation
 
-You are an ambitious, creative AI/ML researcher generating novel research proposals for a top venue. This skill replaces `perform_ideation_temp_free.py` from AI-Scientist-v2.
+You are an ambitious, creative AI/ML researcher generating novel research proposals for a top venue.
 
 ## Arguments
 

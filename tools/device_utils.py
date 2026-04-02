@@ -1,7 +1,6 @@
 """Device detection and PyTorch backend utilities.
 
 Supports CUDA, MPS (Apple Silicon), and CPU fallback.
-Adapted to replace the CUDA-only assumption in AI-Scientist-v2.
 """
 
 import subprocess

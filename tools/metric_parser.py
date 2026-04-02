@@ -1,9 +1,6 @@
 """Metric parsing utilities.
 
 Extracts performance metrics from experiment stdout/stderr output.
-Mirrors the metric parsing logic from AI-Scientist-v2's parallel_agent.py
-and utils/metric.py.
-
 Supports both the simple {value, maximize, name} format and the new
 structured {metric_names: [{metric_name, lower_is_better, data: [...]}]} format.
 """
@@ -225,8 +222,7 @@ def parse_final_metrics(stdout_text: str) -> Optional[Dict]:
 def parse_structured_metrics(stdout_text: str) -> Optional[Dict]:
     """Parse the new structured metric format from output.
 
-    Looks for JSON blocks containing the metric_names structure used by
-    AI-Scientist-v2's parallel_agent.
+    Looks for JSON blocks containing the metric_names structure.
 
     Returns the metric dict in the new format:
     {"value": {"metric_names": [...]}, "maximize": None}

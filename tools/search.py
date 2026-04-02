@@ -5,8 +5,6 @@ Provides two backends:
    returns structured data with bibtex citations.
 2. Fallback mode — when no S2 key is available, the Claude Code skill should use
    the built-in WebSearch tool instead (handled at the skill layer).
-
-Adapted from AI-Scientist-v2/ai_scientist/tools/semantic_scholar.py.
 """
 
 import json

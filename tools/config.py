@@ -1,8 +1,4 @@
-"""Configuration loading and defaults for AI Scientist experiments.
-
-Adapted from AI-Scientist-v2/ai_scientist/treesearch/utils/config.py
-to work standalone with Claude Code skills.
-"""
+"""Configuration loading and defaults for AI Scientist experiments."""
 
 import argparse
 import json

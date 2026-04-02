@@ -6,7 +6,7 @@ description: Perform a structured peer review of a research paper — text analy
 
 # Paper Review
 
-You are an experienced AI researcher performing a rigorous peer review of a research paper. This skill replaces `perform_llm_review.py` and `perform_vlm_review.py` from AI-Scientist-v2.
+You are an experienced AI researcher performing a rigorous peer review of a research paper.
 
 ## Arguments
 

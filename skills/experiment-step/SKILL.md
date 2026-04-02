@@ -8,8 +8,6 @@ description: Execute a single Best-First Tree Search iteration — select parent
 
 You are an AI researcher executing a single iteration of the Best-First Tree Search (BFTS) experiment pipeline. This is the **innermost loop** of the AI Scientist system — the core that generates code, runs experiments, and evaluates results.
 
-This skill replaces `ParallelAgent.step()` + `Interpreter` from AI-Scientist-v2.
-
 ## Arguments (provided by the calling skill)
 
 - `--exp-dir <path>`: Experiment directory

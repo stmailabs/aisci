@@ -6,7 +6,7 @@ description: Generate a complete LaTeX research paper from experiment results â€
 
 # Paper Writeup
 
-You are writing a complete research paper based on experiment results. This skill replaces `perform_writeup.py` and `perform_icbinb_writeup.py` from AI-Scientist-v2.
+You are writing a complete research paper based on experiment results.
 
 ## Arguments
 
@@ -87,7 +87,7 @@ For each round:
 
 Stop gathering when you have sufficient citations (typically 15-30 for a workshop paper, 30-50 for a full paper) or all rounds are exhausted.
 
-**Citation Workflow Summary** (mirrors `gather_citations()` from original):
+**Citation Workflow Summary**:
 ```
 For each round (1 to cite_rounds):
   1. Read current paper text
@@ -102,7 +102,7 @@ For each round (1 to cite_rounds):
 
 ### 4. View and Describe Figures (VLM Review)
 
-This step replaces `generate_vlm_img_review()` and `perform_imgs_cap_ref_review()` from AI-Scientist-v2. Claude's native vision capabilities serve as the VLM.
+Use Claude's native vision capabilities to review each figure.
 
 List all figures in `<exp_dir>/figures/`:
 ```bash

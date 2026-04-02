@@ -6,7 +6,7 @@ description: Aggregate and generate publication-quality figures from experiment 
 
 # Plot Aggregation
 
-You are generating publication-quality figures for an AI research paper. This skill replaces `perform_plotting.py` from AI-Scientist-v2.
+You are generating publication-quality figures for an AI research paper.
 
 ## Arguments
 

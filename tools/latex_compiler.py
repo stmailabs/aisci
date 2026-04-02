@@ -2,8 +2,6 @@
 
 Wraps pdflatex + bibtex for paper generation.
 Cross-platform: works on Mac (BasicTeX/MacTeX) and Linux (texlive).
-Adapted from the compilation logic in AI-Scientist-v2's perform_writeup.py
-and perform_icbinb_writeup.py.
 """
 
 import os
@@ -42,7 +40,6 @@ def compile_latex(
     """Compile a LaTeX document to PDF.
 
     Runs pdflatex multiple times (for cross-references) and bibtex.
-    Mirrors the compilation loop from AI-Scientist-v2.
 
     Parameters
     ----------
