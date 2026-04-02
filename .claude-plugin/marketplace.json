@@ -1,0 +1,27 @@
+{
+  "name": "ai-scientist-skills",
+  "owner": {
+    "name": "x-roocky"
+  },
+  "metadata": {
+    "description": "The complete AI-Scientist-v2 research pipeline reimplemented as a Claude Code skills package, one agent does it all.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "ai-scientist",
+      "description": "Full AI research pipeline: ideation, BFTS experiment, plot aggregation, paper writeup, and peer review — all driven by a single agent.",
+      "source": "./",
+      "skills": [
+        "./skills/pipeline",
+        "./skills/ideation",
+        "./skills/experiment",
+        "./skills/experiment-step",
+        "./skills/plot",
+        "./skills/writeup",
+        "./skills/review",
+        "./skills/lit-search"
+      ]
+    }
+  ]
+}

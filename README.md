@@ -82,12 +82,15 @@ cd ai-scientist-skills
 pip install -r requirements.txt
 ```
 
-**Option B — Install as Claude Code plugin**:
-```bash
-git clone https://github.com/x-roocky/ai-scientist-skills.git
-pip install -r ai-scientist-skills/requirements.txt
-claude --plugin-dir ./ai-scientist-skills
+**Option B — Install as Claude Code plugin** (via marketplace):
 ```
+/plugin marketplace add x-roocky/ai-scientist-skills
+/plugin install ai-scientist@ai-scientist-skills
+```
+
+**Option C — Cross-agent** (Codex CLI, Cursor, Gemini CLI, etc.):
+
+The `.agents/skills/` directory follows the [Agent Skills](https://agentskills.io) open standard. Clone the repo into your project or home directory — any compliant agent will auto-discover the skills.
 
 ### Verify
 

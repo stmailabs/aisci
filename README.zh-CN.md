@@ -82,12 +82,15 @@ cd ai-scientist-skills
 pip install -r requirements.txt
 ```
 
-**方式 B — 作为 Claude Code 插件安装**：
-```bash
-git clone https://github.com/x-roocky/ai-scientist-skills.git
-pip install -r ai-scientist-skills/requirements.txt
-claude --plugin-dir ./ai-scientist-skills
+**方式 B — 作为 Claude Code 插件安装**（通过 marketplace）：
 ```
+/plugin marketplace add x-roocky/ai-scientist-skills
+/plugin install ai-scientist@ai-scientist-skills
+```
+
+**方式 C — 跨 Agent 使用**（Codex CLI、Cursor、Gemini CLI 等）：
+
+`.agents/skills/` 目录遵循 [Agent Skills](https://agentskills.io) 开放标准。将仓库克隆到项目或用户目录下，任何兼容的 Agent 都会自动发现这些技能。
 
 ### 验证环境
 
