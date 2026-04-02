@@ -88,10 +88,6 @@ pip install -r requirements.txt
 /plugin install ai-scientist@ai-scientist-skills
 ```
 
-**方式 C — 跨 Agent 使用**（Codex CLI、Cursor、Gemini CLI 等）：
-
-`.agents/skills/` 目录遵循 [Agent Skills](https://agentskills.io) 开放标准。将仓库克隆到项目或用户目录下，任何兼容的 Agent 都会自动发现这些技能。注意：非 Claude Code 的 Agent 中技能名不带 `ai-scientist:` 前缀（如 `/workshop` 而非 `/ai-scientist:workshop`）。
-
 ### 验证环境
 
 ```bash
