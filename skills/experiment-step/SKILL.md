@@ -23,26 +23,18 @@ Parse these from the user's message or arguments.
 
 ### 1. Load Context
 
+Check the current journal state:
 ```bash
-# Load experiment state and journal
-python3 -c "
-import json, sys
-sys.path.insert(0, '.')
-from tools.state_manager import load_journal, get_node_by_id
-journal = load_journal('<exp_dir>', '<stage>')
-print(json.dumps({'total_nodes': len(journal['nodes']), 'stage': '<stage>'}, indent=2))
-"
+python3 tools/state_manager.py journal-summary <exp_dir> <stage>
 ```
 
-If a parent node ID is provided, read the parent node's code, metrics, analysis, and execution output from the journal.
+If a parent node ID is provided, read the parent node's details:
+```bash
+python3 tools/state_manager.py node-info <exp_dir> <stage> <parent_id> --show-code
+```
 
 ### 2. Detect Device
 
-```bash
-python3 tools/device_utils.py
-```
-
-Read the detected device and get the device preamble:
 ```bash
 python3 tools/device_utils.py --preamble
 ```
@@ -59,13 +51,13 @@ Based on the action type, generate a complete Python experiment script:
 - Include plotting code (loss curves, accuracy, etc.)
 
 #### For `debug` (fix buggy parent):
-- Read the parent's code and error output
+- Read the parent's code and error output from node-info
 - Identify the bug from the exception type and stack trace
 - Fix the issue while preserving the approach
 - Do NOT completely rewrite — make targeted fixes
 
 #### For `improve` (enhance good parent):
-- Read the parent's code, metrics, and analysis
+- Read the parent's code, metrics, and analysis from node-info
 - Make specific improvements based on the stage goals:
   - **Stage 1**: Get it working with basic correctness
   - **Stage 2**: Tune hyperparameters (LR, epochs, batch size), add datasets. Do NOT change architecture.
@@ -84,12 +76,11 @@ The generated code MUST:
 5. Use `torch.no_grad()` for evaluation
 6. Set random seeds for reproducibility
 7. Print dataset names when loaded: `Dataset: <name>`
-8. Keep execution time under 60 minutes (scale model/data appropriately)
+8. Keep execution time under 60 minutes
 
-Example metric output format:
+Example metric output:
 ```
 Epoch 1/10, train_loss: 0.5234, val_loss: 0.4891, accuracy: 0.7523
-Epoch 2/10, train_loss: 0.3456, val_loss: 0.3210, accuracy: 0.8234
 ...
 Final Results:
 val_loss: 0.2100
@@ -98,32 +89,23 @@ accuracy: 0.8900
 
 ### 4. Write and Execute Code
 
-Write the generated code to the workspace:
+Determine step number from journal-summary total_nodes.
+
+Write the code:
 ```bash
 cat > <exp_dir>/workspace/runfile.py << 'PYTHON_EOF'
 <generated code>
 PYTHON_EOF
-```
-
-Create the figures directory:
-```bash
 mkdir -p <exp_dir>/workspace/figures
 ```
 
-Execute with timeout:
+Execute and capture output:
 ```bash
-cd <exp_dir>/workspace && timeout 3600 python runfile.py 2>&1
+cd <exp_dir>/workspace && timeout 3600 python3 runfile.py 2>&1 | tee <exp_dir>/logs/step_<N>_output.txt
 ```
-
-**Important**: Capture the full output (stdout + stderr). This is needed for metric parsing.
 
 ### 5. Parse Metrics
 
-```bash
-cd <exp_dir>/workspace && timeout 3600 python runfile.py 2>&1 | tee <exp_dir>/logs/step_<N>_output.txt
-```
-
-Then parse metrics:
 ```bash
 python3 tools/metric_parser.py <exp_dir>/logs/step_<N>_output.txt --json
 ```
@@ -132,59 +114,30 @@ python3 tools/metric_parser.py <exp_dir>/logs/step_<N>_output.txt --json
 
 If plots were generated in `<exp_dir>/workspace/figures/`:
 - Use the Read tool to view each generated PNG file
-- Analyze the plots:
-  - Are training curves converging?
-  - Is there overfitting (train vs val divergence)?
-  - Are results consistent across datasets?
-  - Do ablation results show clear component contributions?
+- Analyze: convergence, overfitting, consistency across datasets, ablation clarity
 
 ### 7. Determine Bug Status
 
-A node is **buggy** if ANY of:
-- The execution raised an exception (non-zero exit code)
-- No valid metrics were parsed from the output
-- Execution timed out
-- The code produced NaN/Inf values in metrics
-
-A node is **not buggy** if:
-- Execution completed successfully
-- At least one valid metric was parsed
-- Plots were generated (optional but preferred)
+**Buggy** if ANY of: exception raised, no valid metrics, timeout, NaN/Inf in metrics.
+**Not buggy** if: execution completed + at least one valid metric.
 
 ### 8. Save Node to Journal
 
 ```bash
-python3 -c "
-import json, sys, time
-sys.path.insert(0, '.')
-from tools.state_manager import load_journal, create_node, add_node, save_journal
-
-journal = load_journal('<exp_dir>', '<stage>')
-node = create_node(
-    stage='<stage>',
-    plan='<brief plan description>',
-    code=open('<exp_dir>/workspace/runfile.py').read(),
-    parent_id=<parent_id_or_None>,
-    plot_code=None,
-)
-
-# Fill execution results
-node['term_out'] = open('<exp_dir>/logs/step_<N>_output.txt').read().splitlines()
-node['exec_time'] = <execution_time_seconds>
-node['exc_type'] = <exception_type_or_None>
-node['is_buggy'] = <True_or_False>
-node['is_buggy_plots'] = <True_or_False>
-node['analysis'] = '''<your analysis of the results>'''
-node['metric'] = <parsed_metric_dict_or_None>
-node['plot_paths'] = <list_of_plot_paths>
-node['vlm_feedback_summary'] = ['''<your plot analysis>''']
-node['datasets_successfully_tested'] = <list_of_dataset_names>
-
-add_node(journal, node)
-save_journal('<exp_dir>', '<stage>', journal)
-print(json.dumps({'node_id': node['id'], 'is_buggy': node['is_buggy'], 'metric': node['metric']}, indent=2))
-"
+python3 tools/state_manager.py add-node <exp_dir> <stage> \
+    --plan "<brief plan description>" \
+    --code <exp_dir>/workspace/runfile.py \
+    --output-log <exp_dir>/logs/step_<N>_output.txt \
+    --exec-time <seconds> \
+    --metric '<metric_json>' \
+    --datasets <dataset1> <dataset2> \
+    --plots <exp_dir>/workspace/figures/plot1.png <exp_dir>/workspace/figures/plot2.png \
+    [--parent-id <parent_id>] \
+    [--buggy] \
+    [--analysis "<analysis text>"]
 ```
+
+This command prints the new node's ID, step number, buggy status, and metric.
 
 ### 9. Report Results
 

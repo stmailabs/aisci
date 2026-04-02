@@ -541,28 +541,102 @@ def save_best_solution(exp_dir: str, stage: str, journal: Dict) -> Optional[str]
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="AI Scientist state manager")
+    parser = argparse.ArgumentParser(
+        description="AI Scientist state manager",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+examples:
+  python3 tools/state_manager.py init --idea idea.json --config templates/bfts_config.yaml
+  python3 tools/state_manager.py status experiments/20260402_idea
+  python3 tools/state_manager.py select-nodes experiments/20260402_idea stage1_initial
+  python3 tools/state_manager.py add-node experiments/20260402_idea stage1_initial --code runfile.py --plan "First draft" --metric '{"value":0.85,"maximize":false,"name":"val_loss"}'
+  python3 tools/state_manager.py best-node experiments/20260402_idea stage1_initial
+  python3 tools/state_manager.py save-best experiments/20260402_idea stage1_initial
+  python3 tools/state_manager.py transition experiments/20260402_idea stage1_initial stage2_baseline
+  python3 tools/state_manager.py update-state experiments/20260402_idea --phase complete --status done
+        """,
+    )
     sub = parser.add_subparsers(dest="command")
 
-    # init
-    init_p = sub.add_parser("init", help="Initialize experiment")
+    # init — initialize experiment
+    init_p = sub.add_parser("init", help="Initialize experiment directory")
     init_p.add_argument("--idea", required=True, help="Path to idea JSON")
     init_p.add_argument("--config", default=None, help="Path to config YAML")
     init_p.add_argument("--base-dir", default="experiments", help="Base experiments dir")
 
-    # status
-    status_p = sub.add_parser("status", help="Show experiment status")
+    # status — show experiment state
+    status_p = sub.add_parser("status", help="Show experiment state")
     status_p.add_argument("exp_dir", help="Experiment directory")
 
-    # journal-summary
-    summary_p = sub.add_parser("journal-summary", help="Show journal summary")
+    # journal-summary — summarize a stage journal
+    summary_p = sub.add_parser("journal-summary", help="Summarize stage journal")
     summary_p.add_argument("exp_dir", help="Experiment directory")
     summary_p.add_argument("stage", help="Stage name")
+
+    # select-nodes — pick candidate parents for next expansion
+    sel_p = sub.add_parser("select-nodes", help="Select candidate nodes for expansion")
+    sel_p.add_argument("exp_dir", help="Experiment directory")
+    sel_p.add_argument("stage", help="Stage name")
+    sel_p.add_argument("--max-debug-depth", type=int, default=3)
+    sel_p.add_argument("--debug-prob", type=float, default=0.5)
+
+    # add-node — create and add a node to the journal
+    add_p = sub.add_parser("add-node", help="Add a node to the stage journal")
+    add_p.add_argument("exp_dir", help="Experiment directory")
+    add_p.add_argument("stage", help="Stage name")
+    add_p.add_argument("--parent-id", default=None, help="Parent node ID")
+    add_p.add_argument("--plan", default="", help="Brief plan description")
+    add_p.add_argument("--code", default=None, help="Path to code file")
+    add_p.add_argument("--output-log", default=None, help="Path to execution output log")
+    add_p.add_argument("--exec-time", type=float, default=None, help="Execution time (seconds)")
+    add_p.add_argument("--metric", default=None, help="Metric JSON string or @file")
+    add_p.add_argument("--buggy", action="store_true", help="Mark node as buggy")
+    add_p.add_argument("--analysis", default=None, help="Analysis text or @file")
+    add_p.add_argument("--plots", nargs="*", default=[], help="Plot file paths")
+    add_p.add_argument("--datasets", nargs="*", default=[], help="Datasets tested")
+
+    # best-node — show the best node in a stage
+    best_p = sub.add_parser("best-node", help="Show best node in a stage")
+    best_p.add_argument("exp_dir", help="Experiment directory")
+    best_p.add_argument("stage", help="Stage name")
+    best_p.add_argument("--show-code", action="store_true", help="Print the code too")
+
+    # save-best — save best solution to file
+    saveb_p = sub.add_parser("save-best", help="Save best solution code to file")
+    saveb_p.add_argument("exp_dir", help="Experiment directory")
+    saveb_p.add_argument("stage", help="Stage name")
+
+    # transition — record stage transition
+    trans_p = sub.add_parser("transition", help="Transition to next stage")
+    trans_p.add_argument("exp_dir", help="Experiment directory")
+    trans_p.add_argument("from_stage", help="Current stage")
+    trans_p.add_argument("to_stage", help="Next stage")
+    trans_p.add_argument("--reason", default="Stage completed", help="Transition reason")
+
+    # update-state — update experiment state fields
+    upd_p = sub.add_parser("update-state", help="Update experiment state")
+    upd_p.add_argument("exp_dir", help="Experiment directory")
+    upd_p.add_argument("--phase", default=None, help="Set current phase")
+    upd_p.add_argument("--stage", default=None, help="Set current stage")
+    upd_p.add_argument("--status", default=None, help="Set status")
+
+    # node-info — show details of a specific node
+    info_p = sub.add_parser("node-info", help="Show details of a specific node")
+    info_p.add_argument("exp_dir", help="Experiment directory")
+    info_p.add_argument("stage", help="Stage name")
+    info_p.add_argument("node_id", help="Node ID")
+    info_p.add_argument("--show-code", action="store_true", help="Print the code too")
 
     # test
     sub.add_parser("test", help="Run self-test")
 
     args = parser.parse_args()
+
+    def _read_file_or_str(val):
+        """If val starts with @, read the file; otherwise return as-is."""
+        if val and val.startswith("@"):
+            return Path(val[1:]).read_text()
+        return val
 
     if args.command == "init":
         with open(args.idea) as f:
@@ -572,7 +646,7 @@ if __name__ == "__main__":
             with open(args.config) as f:
                 config = yaml.safe_load(f) or {}
         exp_dir = init_experiment(idea, config, base_dir=args.base_dir)
-        print(f"Experiment initialized: {exp_dir}")
+        print(exp_dir)
 
     elif args.command == "status":
         state = load_experiment_state(args.exp_dir)
@@ -583,9 +657,131 @@ if __name__ == "__main__":
         summary = get_journal_summary(journal)
         print(json.dumps(summary, indent=2))
 
+    elif args.command == "select-nodes":
+        journal = load_journal(args.exp_dir, args.stage)
+        candidates = get_nodes_for_expansion(
+            journal,
+            max_debug_depth=args.max_debug_depth,
+            debug_prob=args.debug_prob,
+        )
+        result = []
+        for c in candidates:
+            action = "debug" if c.get("is_buggy") else "improve"
+            if c.get("parent_id") is None and not c.get("is_buggy"):
+                action = "improve"  # root good node
+            result.append({
+                "id": c["id"],
+                "action": action,
+                "metric": c.get("metric"),
+                "is_buggy": c.get("is_buggy"),
+                "stage": c.get("stage"),
+            })
+        print(json.dumps(result, indent=2))
+
+    elif args.command == "add-node":
+        journal = load_journal(args.exp_dir, args.stage)
+        code = ""
+        if args.code:
+            code = Path(args.code).read_text()
+        node = create_node(
+            stage=args.stage,
+            plan=args.plan,
+            code=code,
+            parent_id=args.parent_id,
+        )
+        # Fill execution results
+        if args.output_log:
+            log_path = Path(args.output_log)
+            if log_path.exists():
+                node["term_out"] = log_path.read_text().splitlines()
+        if args.exec_time is not None:
+            node["exec_time"] = args.exec_time
+        if args.metric:
+            metric_str = _read_file_or_str(args.metric)
+            node["metric"] = json.loads(metric_str)
+        node["is_buggy"] = args.buggy
+        node["is_buggy_plots"] = False
+        if args.analysis:
+            node["analysis"] = _read_file_or_str(args.analysis)
+        node["plot_paths"] = args.plots
+        node["datasets_successfully_tested"] = args.datasets
+
+        add_node(journal, node)
+        save_journal(args.exp_dir, args.stage, journal)
+        print(json.dumps({
+            "node_id": node["id"],
+            "step": node["step"],
+            "is_buggy": node["is_buggy"],
+            "metric": node.get("metric"),
+        }, indent=2))
+
+    elif args.command == "best-node":
+        journal = load_journal(args.exp_dir, args.stage)
+        best = get_best_node(journal)
+        if best is None:
+            print(json.dumps({"error": "No good nodes found"}))
+        else:
+            info = {
+                "id": best["id"],
+                "step": best["step"],
+                "metric": best.get("metric"),
+                "datasets": best.get("datasets_successfully_tested", []),
+                "plan": best.get("plan", ""),
+            }
+            if args.show_code:
+                info["code"] = best.get("code", "")
+            print(json.dumps(info, indent=2))
+
+    elif args.command == "save-best":
+        journal = load_journal(args.exp_dir, args.stage)
+        filepath = save_best_solution(args.exp_dir, args.stage, journal)
+        if filepath:
+            print(filepath)
+        else:
+            print("No good nodes to save", file=sys.stderr)
+            sys.exit(1)
+
+    elif args.command == "transition":
+        journal = load_journal(args.exp_dir, args.from_stage)
+        best = get_best_node(journal)
+        best_id = best["id"] if best else None
+        save_best_solution(args.exp_dir, args.from_stage, journal)
+        state = transition_stage(
+            args.exp_dir, args.from_stage, args.to_stage,
+            best_node_id=best_id, reason=args.reason,
+        )
+        print(json.dumps({
+            "from": args.from_stage,
+            "to": args.to_stage,
+            "best_node_id": best_id,
+            "completed_stages": state["completed_stages"],
+        }, indent=2))
+
+    elif args.command == "update-state":
+        state = update_experiment_state(
+            args.exp_dir,
+            phase=args.phase,
+            stage=args.stage,
+            status=args.status,
+        )
+        print(json.dumps(state, indent=2))
+
+    elif args.command == "node-info":
+        journal = load_journal(args.exp_dir, args.stage)
+        node = get_node_by_id(journal, args.node_id)
+        if node is None:
+            print(json.dumps({"error": f"Node {args.node_id} not found"}))
+            sys.exit(1)
+        info = {k: v for k, v in node.items() if k != "code" or args.show_code}
+        if not args.show_code:
+            info.pop("code", None)
+            info.pop("term_out", None)  # skip verbose output by default
+        print(json.dumps(info, indent=2, default=str))
+
     elif args.command == "test":
-        # Self-test
         print("Running self-test...")
+        import tempfile
+
         idea = {
             "Name": "test_idea",
             "Title": "Test Research Idea",
@@ -594,49 +790,34 @@ if __name__ == "__main__":
             "Experiments": ["Exp 1", "Exp 2"],
             "Risk Factors and Limitations": ["Risk 1"],
         }
-        import tempfile
-
         with tempfile.TemporaryDirectory() as tmpdir:
             exp_dir = init_experiment(idea, {"timeout": 3600}, base_dir=tmpdir)
             print(f"  Created experiment: {exp_dir}")
 
-            # Add nodes
             journal = load_journal(exp_dir, "stage1_initial")
             node1 = create_node("stage1_initial", plan="First draft", code="print('hello')")
             add_node(journal, node1)
             node1["metric"] = {"value": 0.85, "maximize": False, "name": "val_loss"}
             node1["is_buggy"] = False
-            node1["is_buggy_plots"] = False
 
-            node2 = create_node(
-                "stage1_initial",
-                plan="Second draft",
-                code="print('world')",
-                parent_id=node1["id"],
-            )
+            node2 = create_node("stage1_initial", plan="Second draft", code="print('world')", parent_id=node1["id"])
             add_node(journal, node2)
             node2["metric"] = {"value": 0.72, "maximize": False, "name": "val_loss"}
             node2["is_buggy"] = False
-            node2["is_buggy_plots"] = False
 
             save_journal(exp_dir, "stage1_initial", journal)
 
-            # Reload and verify
             journal2 = load_journal(exp_dir, "stage1_initial")
             assert len(journal2["nodes"]) == 2
             best = get_best_node(journal2)
-            assert best["id"] == node2["id"]  # 0.72 < 0.85, minimize → node2 is better
+            assert best["id"] == node2["id"]
             print(f"  Best node: {best['id']} (metric: {best['metric']})")
 
-            summary = get_journal_summary(journal2)
-            print(f"  Summary: {json.dumps(summary, indent=2)}")
-
-            # Test stage transition
             transition_stage(exp_dir, "stage1_initial", "stage2_baseline", best["id"])
             state = load_experiment_state(exp_dir)
             assert state["current_stage"] == "stage2_baseline"
-            print(f"  Stage transition OK: {state['current_stage']}")
+            print(f"  Stage transition OK")
 
-            print("Self-test PASSED ✓")
+            print("Self-test PASSED")
     else:
         parser.print_help()

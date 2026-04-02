@@ -32,7 +32,12 @@ All tools are invoked via `python3 tools/<module>.py` from the project root:
 python3 tools/verify_setup.py              # Verify all prerequisites
 python3 tools/device_utils.py              # Detect CUDA/MPS/CPU
 python3 tools/search.py "query"            # Search papers (S2 API)
-python3 tools/state_manager.py status DIR  # Check experiment state
+python3 tools/state_manager.py init --idea FILE --config FILE  # Init experiment
+python3 tools/state_manager.py status DIR            # Check experiment state
+python3 tools/state_manager.py select-nodes DIR STAGE # Pick nodes to expand
+python3 tools/state_manager.py add-node DIR STAGE ... # Record experiment result
+python3 tools/state_manager.py best-node DIR STAGE   # Get best node
+python3 tools/state_manager.py transition DIR S1 S2  # Move to next stage
 python3 tools/metric_parser.py FILE        # Parse metrics from output
 python3 tools/latex_compiler.py compile DIR # Compile LaTeX to PDF
 python3 tools/pdf_reader.py FILE           # Extract PDF text

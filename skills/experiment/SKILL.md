@@ -30,31 +30,17 @@ Parse these from the user's message.
 
 ### 1. Initialize Experiment
 
-If no `--exp-dir` is provided (new experiment):
+**New experiment** (no `--exp-dir`):
 ```bash
-python3 -c "
-import json, sys
-sys.path.insert(0, '.')
-from tools.state_manager import init_experiment
-from tools.config import load_config, config_to_dict
-
-idea = json.load(open('<idea_path>'))
-cfg = load_config('<config_path>')
-exp_dir = init_experiment(idea, config_to_dict(cfg))
-print(exp_dir)
-"
+python3 tools/state_manager.py init --idea <idea_path> --config <config_path>
 ```
+This prints the experiment directory path. Use it as `<exp_dir>` in all subsequent commands.
 
-If `--exp-dir` is provided (resume):
+**Resume** (with `--exp-dir`):
 ```bash
-python3 -c "
-import json, sys
-sys.path.insert(0, '.')
-from tools.state_manager import load_experiment_state
-state = load_experiment_state('<exp_dir>')
-print(json.dumps(state, indent=2))
-"
+python3 tools/state_manager.py status <exp_dir>
 ```
+Read the current stage and completed stages to know where to resume.
 
 ### 2. Detect Device
 ```bash
@@ -66,7 +52,7 @@ python3 tools/device_utils.py --info
 python3 tools/config.py --config <config_path>
 ```
 
-Read configuration values:
+Key values:
 - `agent.num_workers`: parallel agents (default 2)
 - `agent.stages.stageN_max_iters`: iteration limits
 - `agent.search.num_drafts`: initial drafts per stage (default 3)
@@ -76,7 +62,7 @@ Read configuration values:
 
 ### 4. Build Task Description
 
-Compose the task description from the idea JSON:
+Compose from the idea JSON:
 ```
 You are an ambitious AI researcher looking to publish a paper at a top conference.
 
@@ -113,100 +99,59 @@ Repeat until stage completion (max_iters reached or completion criteria met):
 
 1. **Select candidate nodes** for expansion:
    ```bash
-   python3 -c "
-   import json, sys
-   sys.path.insert(0, '.')
-   from tools.state_manager import load_journal, get_nodes_for_expansion
-   journal = load_journal('<exp_dir>', '<stage>')
-   candidates = get_nodes_for_expansion(journal, max_debug_depth=3, debug_prob=0.5)
-   for c in candidates:
-       action = 'debug' if c.get('is_buggy') else 'improve'
-       print(json.dumps({'id': c['id'], 'action': action, 'metric': c.get('metric')}, indent=2))
-   "
+   python3 tools/state_manager.py select-nodes <exp_dir> <stage>
    ```
+   This returns JSON with candidate node IDs and recommended actions (debug/improve).
 
 2. **Launch parallel agents** for each candidate:
-   Use the Agent tool to launch `num_workers` subagents simultaneously:
    ```
    Agent 1: /ai-scientist:experiment-step --exp-dir <exp_dir> --stage <stage> --parent-id <node_id_1> --action <debug|improve> --task-desc "<task_desc>" --stage-goals "<goals>"
    Agent 2: /ai-scientist:experiment-step --exp-dir <exp_dir> --stage <stage> --parent-id <node_id_2> --action <debug|improve> --task-desc "<task_desc>" --stage-goals "<goals>"
    ```
 
 3. **Check stage completion** after each batch:
-
-   **Stage 1 completion**: At least 1 good (non-buggy) node exists.
    ```bash
-   python3 -c "
-   import json, sys
-   sys.path.insert(0, '.')
-   from tools.state_manager import load_journal, get_good_nodes
-   journal = load_journal('<exp_dir>', 'stage1_initial')
-   good = get_good_nodes(journal)
-   print(json.dumps({'complete': len(good) > 0, 'good_count': len(good)}, indent=2))
-   "
+   python3 tools/state_manager.py journal-summary <exp_dir> <stage>
    ```
 
-   **Stage 2 completion**: Training curves show stable convergence on 2+ datasets; no improvement over several iterations.
-
-   **Stage 3 completion**: Execution time scaling properly (>50% of timeout); tested on 3 datasets; novel improvements found.
-
-   **Stage 4 completion**: Max iterations reached (always run to completion for thorough ablation).
-
-4. **Save progress** after each batch:
-   ```bash
-   python3 -c "
-   import json, sys
-   sys.path.insert(0, '.')
-   from tools.state_manager import load_journal, save_best_solution, get_journal_summary
-   journal = load_journal('<exp_dir>', '<stage>')
-   save_best_solution('<exp_dir>', '<stage>', journal)
-   summary = get_journal_summary(journal)
-   print(json.dumps(summary, indent=2))
-   "
-   ```
+   **Stage 1 completion**: `good_nodes > 0`
+   **Stage 2 completion**: Stable convergence on 2+ datasets; no improvement over several iterations.
+   **Stage 3 completion**: Execution time scaling properly (>50% of timeout); tested on 3 datasets.
+   **Stage 4 completion**: Max iterations reached (always run to completion).
 
 #### c. Multi-Seed Evaluation
 
 When a stage completes, run the best node's code with multiple random seeds to validate robustness:
 
-1. Take the best node's code from the completed stage
-2. Run it `num_seeds` times (default 3) with different random seeds (42, 123, 456)
-3. Collect metrics across all seed runs
-4. Select the seed with the best average performance
-5. Run plot aggregation across seed results using the best node
+1. Get the best node's code:
+   ```bash
+   python3 tools/state_manager.py best-node <exp_dir> <stage> --show-code
+   ```
 
-This ensures results are not dependent on a specific random initialization.
+2. Run it with different seeds (42, 123, 456), modifying the seed line each time:
+   ```bash
+   for seed in 42 123 456; do
+       sed "s/torch.manual_seed(42)/torch.manual_seed($seed)/" <exp_dir>/workspace/runfile.py > <exp_dir>/workspace/runfile_seed_$seed.py
+       cd <exp_dir>/workspace && timeout 3600 python3 runfile_seed_$seed.py 2>&1 | tee <exp_dir>/logs/seed_${seed}_output.txt
+   done
+   ```
 
-```bash
-# For each seed, modify the seed in runfile.py and re-execute
-for seed in 42 123 456; do
-    sed "s/torch.manual_seed(42)/torch.manual_seed($seed)/" <exp_dir>/workspace/runfile.py > <exp_dir>/workspace/runfile_seed_$seed.py
-    cd <exp_dir>/workspace && timeout 3600 python runfile_seed_$seed.py 2>&1 | tee <exp_dir>/logs/seed_${seed}_output.txt
-done
-```
+3. Collect and compare metrics across seeds.
 
 #### d. Stage Transition
 
 When a stage completes:
 
-1. Save the best solution:
-   ```bash
-   python3 -c "
-   import json, sys
-   sys.path.insert(0, '.')
-   from tools.state_manager import load_journal, get_best_node, save_best_solution, transition_stage
-   journal = load_journal('<exp_dir>', '<current_stage>')
-   best = get_best_node(journal)
-   save_best_solution('<exp_dir>', '<current_stage>', journal)
-   if best:
-       transition_stage('<exp_dir>', '<current_stage>', '<next_stage>', best['id'], 'Stage completed')
-   "
-   ```
+```bash
+python3 tools/state_manager.py transition <exp_dir> <current_stage> <next_stage>
+```
 
-2. For the next stage, inject the best node as the starting point:
-   - Read the best node's code
-   - Create a new root node in the next stage's journal with that code
-   - This becomes the baseline for the next stage
+This automatically saves the best solution and records the transition.
+
+For the next stage, read the best node's code and use it as the starting point:
+```bash
+python3 tools/state_manager.py best-node <exp_dir> <current_stage> --show-code
+```
 
 ### 6. Post-Experiment
 
@@ -214,37 +159,27 @@ After all 4 stages complete:
 
 1. Print final summary:
    ```bash
-   python3 -c "
-   import json, sys
-   sys.path.insert(0, '.')
-   from tools.state_manager import load_experiment_state, load_journal, get_journal_summary
-   state = load_experiment_state('<exp_dir>')
-   for stage in ['stage1_initial', 'stage2_baseline', 'stage3_creative', 'stage4_ablation']:
-       journal = load_journal('<exp_dir>', stage)
-       summary = get_journal_summary(journal)
-       print(f'{stage}: {json.dumps(summary)}')
-   "
+   python3 tools/state_manager.py status <exp_dir>
+   python3 tools/state_manager.py journal-summary <exp_dir> stage1_initial
+   python3 tools/state_manager.py journal-summary <exp_dir> stage2_baseline
+   python3 tools/state_manager.py journal-summary <exp_dir> stage3_creative
+   python3 tools/state_manager.py journal-summary <exp_dir> stage4_ablation
    ```
 
-2. Copy best results to experiment_results/:
+2. Copy best results:
    ```bash
-   cp <exp_dir>/state/stage4_ablation/best_solution_*.py <exp_dir>/experiment_results/
+   python3 tools/state_manager.py save-best <exp_dir> stage4_ablation
    cp -r <exp_dir>/workspace/figures/* <exp_dir>/figures/ 2>/dev/null || true
    ```
 
-3. Update experiment state:
+3. Mark experiment complete:
    ```bash
-   python3 -c "
-   import json, sys
-   sys.path.insert(0, '.')
-   from tools.state_manager import update_experiment_state
-   update_experiment_state('<exp_dir>', phase='complete', status='experiment_done')
-   "
+   python3 tools/state_manager.py update-state <exp_dir> --phase complete --status experiment_done
    ```
 
 ## Error Handling
 
-- If Stage 1 exhausts max_iters without a working implementation: **stop the experiment** and report failure. The idea may be too complex or infeasible.
+- If Stage 1 exhausts max_iters without a working implementation: **stop the experiment** and report failure.
 - If a stage produces no improvement after multiple iterations: proceed to the next stage with the best available node.
 - If all agents in a parallel batch fail: retry with different approaches before giving up.
 
