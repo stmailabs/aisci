@@ -57,8 +57,14 @@ Based on the action type, generate a complete Python experiment script:
 - Do NOT completely rewrite — make targeted fixes
 
 #### For `improve` (enhance good parent):
-- Read the parent's code, metrics, and analysis from node-info
-- Make specific improvements based on the stage goals:
+- Read the parent's metrics and analysis from node-info
+- If this is the **first node of a new stage** (parent from previous stage):
+  - Read the stage briefing: `python3 tools/state_manager.py stage-briefing <exp_dir> <previous_stage>`
+  - Write fresh code informed by the briefing's findings and metrics
+  - Do NOT copy the parent's code — the goals have changed
+- If this is a **within-stage improvement**:
+  - Read the parent's code from node-info and make targeted improvements
+- Stage-specific goals:
   - **Stage 1**: Get it working with basic correctness
   - **Stage 2**: Tune hyperparameters (LR, epochs, batch size), add datasets. Do NOT change architecture.
   - **Stage 3**: Creative novel improvements, new architectures, 3 HF datasets

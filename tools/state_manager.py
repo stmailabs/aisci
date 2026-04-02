@@ -335,6 +335,50 @@ def get_journal_summary(journal: Dict) -> Dict:
     }
 
 
+def get_stage_briefing(journal: Dict, stage: str) -> Dict:
+    """Generate a rich briefing of a completed stage for handoff to the next stage.
+
+    Unlike journal-summary (counts only), this returns actionable context:
+    what worked, what didn't, key findings, and recommendations.
+    """
+    good = get_good_nodes(journal)
+    buggy = get_buggy_nodes(journal)
+    best = get_best_node(journal)
+
+    # Collect all unique analyses from good nodes
+    findings = []
+    for n in good:
+        if n.get("analysis"):
+            findings.append(n["analysis"])
+
+    # Datasets tested across all good nodes
+    datasets = list(set(
+        ds for n in good for ds in n.get("datasets_successfully_tested", [])
+    ))
+
+    # Collect what approaches failed (from buggy nodes)
+    failures = []
+    for n in buggy:
+        plan = n.get("plan", "")
+        exc = n.get("exc_type", "")
+        if plan or exc:
+            failures.append({"plan": plan, "error": exc})
+
+    briefing = {
+        "stage": stage,
+        "stage_goal": STAGE_GOALS.get(stage, {}).get("goal", ""),
+        "total_iterations": len(journal.get("nodes", [])),
+        "successful_iterations": len(good),
+        "failed_iterations": len(buggy),
+        "datasets_tested": datasets,
+        "best_metric": best.get("metric") if best else None,
+        "best_plan": best.get("plan", "") if best else "",
+        "key_findings": findings[-3:],  # last 3 analyses (most refined)
+        "failed_approaches": failures[-3:],  # last 3 failures
+    }
+    return briefing
+
+
 # ── Experiment state ─────────────────────────────────────────────────────────
 
 
@@ -627,6 +671,11 @@ examples:
     info_p.add_argument("node_id", help="Node ID")
     info_p.add_argument("--show-code", action="store_true", help="Print the code too")
 
+    # stage-briefing — rich summary for stage handoff
+    brief_p = sub.add_parser("stage-briefing", help="Generate stage briefing for handoff to next stage")
+    brief_p.add_argument("exp_dir", help="Experiment directory")
+    brief_p.add_argument("stage", help="Stage name")
+
     # test
     sub.add_parser("test", help="Run self-test")
 
@@ -777,6 +826,11 @@ examples:
             info.pop("code", None)
             info.pop("term_out", None)  # skip verbose output by default
         print(json.dumps(info, indent=2, default=str))
+
+    elif args.command == "stage-briefing":
+        journal = load_journal(args.exp_dir, args.stage)
+        briefing = get_stage_briefing(journal, args.stage)
+        print(json.dumps(briefing, indent=2, default=str))
 
     elif args.command == "test":
         print("Running self-test...")

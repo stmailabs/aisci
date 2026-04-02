@@ -142,16 +142,25 @@ When a stage completes, run the best node's code with multiple random seeds to v
 
 When a stage completes:
 
-```bash
-python3 tools/state_manager.py transition <exp_dir> <current_stage> <next_stage>
-```
+1. Record the transition:
+   ```bash
+   python3 tools/state_manager.py transition <exp_dir> <current_stage> <next_stage>
+   ```
 
-This automatically saves the best solution and records the transition.
+2. Generate a stage briefing for the next stage:
+   ```bash
+   python3 tools/state_manager.py stage-briefing <exp_dir> <current_stage>
+   ```
+   This returns a JSON summary with: best metrics, datasets tested, key findings, and failed approaches.
 
-For the next stage, read the best node's code and use it as the starting point:
-```bash
-python3 tools/state_manager.py best-node <exp_dir> <current_stage> --show-code
-```
+3. **Pass the briefing (not the code) to the next stage.** The next stage's agent should:
+   - Read the briefing to understand what worked and what didn't
+   - Write fresh code informed by the findings — NOT copy-paste previous code
+   - Build on the conclusions (e.g., "learning rate 3e-4 worked best on MNIST and FashionMNIST") rather than inheriting implementation details
+
+   The best node's code is still saved (via `save-best`) for reference if needed, but the primary handoff is the briefing.
+
+**Why briefings instead of code?** Each stage has fundamentally different goals. Stage 2 changes hyperparameters, Stage 3 changes architecture, Stage 4 adds ablation logic. Passing code forces the agent to work around existing structure. Passing conclusions lets it write clean code for the new goal.
 
 ### 6. Post-Experiment
 
