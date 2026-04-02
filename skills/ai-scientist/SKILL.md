@@ -20,16 +20,17 @@ You are the AI Scientist, an autonomous research agent that generates novel rese
 - `--skip-review`: Skip the review phase
 - `--seed-code <path>`: Path to optional seed code file
 
-Parse from the user's message. At minimum, `--workshop` or `--idea` or `--exp-dir` must be provided.
+Parse from the user's message. If none of `--workshop`, `--idea`, or `--exp-dir` is provided, start with Phase 0.5 (Workshop Creator) to interactively guide the user.
 
 ## Pipeline Overview
 
 ```
-1. Ideation     → ideas.json        (generate research proposals)
-2. Experiment   → experiment results (4-stage BFTS tree search)
-3. Plot         → figures/           (publication-quality figures)
-4. Writeup      → paper.pdf          (LaTeX paper generation)
-5. Review       → review.json        (structured peer review)
+0.5. Workshop    → topic.md          (interactive topic creation, if needed)
+1.   Ideation    → ideas.json        (generate research proposals)
+2.   Experiment  → experiment results (4-stage BFTS tree search)
+3.   Plot        → figures/           (publication-quality figures)
+4.   Writeup     → paper.pdf          (LaTeX paper generation)
+5.   Review      → review.json        (structured peer review)
 ```
 
 ## Procedure
@@ -60,6 +61,17 @@ Parse from the user's message. At minimum, `--workshop` or `--idea` or `--exp-di
    python3 tools/latex_compiler.py check
    ```
    Warn if pdflatex or bibtex is missing — the experiment can still run, paper generation will be skipped.
+
+### Phase 0.5: Workshop Creator
+
+**Skip if** `--workshop`, `--idea`, or `--exp-dir` is already provided.
+
+If the user didn't specify a research topic, invoke the workshop skill to guide them interactively:
+```
+/ai-scientist:workshop
+```
+
+This will ask the user about their research interests and generate a workshop description `.md` file. Use the output path as `--workshop` for the next phase.
 
 ### Phase 1: Ideation
 
