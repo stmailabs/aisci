@@ -49,9 +49,10 @@ Create empty references file:
 touch <exp_dir>/latex/references.bib
 ```
 
-Create figures symlink so LaTeX can find figures:
+Copy figures into the LaTeX directory (template uses `\graphicspath{{./figures/}}`):
 ```bash
-ln -sf ../../figures <exp_dir>/latex/figures 2>/dev/null || cp -r <exp_dir>/figures <exp_dir>/latex/figures
+mkdir -p <exp_dir>/latex/figures
+cp <exp_dir>/figures/*.png <exp_dir>/figures/*.pdf <exp_dir>/latex/figures/ 2>/dev/null || true
 ```
 
 ### 3. Gather Citations (up to cite-rounds iterations)
@@ -134,7 +135,7 @@ Same structure plus:
 
 #### LaTeX Requirements:
 - Replace the placeholder sections in `template.tex` between `%%%%%%%%%SECTION%%%%%%%%%` markers
-- Use `\begin{figure}` with `\includegraphics{figures/<filename>}` for plots
+- Use `\begin{figure}` with `\includegraphics{<filename>}` for plots (graphicspath handles the directory)
 - Use `\cite{key}` for citations matching `references.bib` keys
 - Use proper math notation (`\mathbb{R}`, `\mathcal{L}`, etc.)
 - Ensure all figures are referenced in the text

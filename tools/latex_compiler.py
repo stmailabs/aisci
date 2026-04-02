@@ -247,6 +247,9 @@ def setup_latex_dir(
                 shutil.rmtree(str(dest_item))
             shutil.copytree(str(item), str(dest_item))
 
+    # Create figures/ subdirectory for graphicspath
+    (dst / "figures").mkdir(exist_ok=True)
+
     return str(dst)
 
 
