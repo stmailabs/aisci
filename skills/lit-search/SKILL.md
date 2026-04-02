@@ -1,9 +1,8 @@
 ---
-name: ai-scientist:lit-search
+name: lit-search
 description: Search academic literature using Semantic Scholar API or WebSearch. Returns papers with titles, abstracts, citation counts, and optionally bibtex entries.
 ---
 
-<command-name>ai-scientist:lit-search</command-name>
 
 # Literature Search
 

@@ -1,9 +1,8 @@
 ---
-name: ai-scientist
+name: pipeline
 description: Run the complete AI Scientist pipeline — from research ideation through experiment execution, paper writing, and peer review. Orchestrates all sub-skills.
 ---
 
-<command-name>ai-scientist</command-name>
 
 # AI Scientist — Full Research Pipeline
 

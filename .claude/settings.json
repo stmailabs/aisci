@@ -2,35 +2,35 @@
   "skills": {
     "ai-scientist": {
       "type": "prompt",
-      "path": "skills/ai-scientist.md"
+      "path": "skills/pipeline/SKILL.md"
     },
     "ai-scientist:ideation": {
       "type": "prompt",
-      "path": "skills/ai-scientist-ideation.md"
+      "path": "skills/ideation/SKILL.md"
     },
     "ai-scientist:experiment": {
       "type": "prompt",
-      "path": "skills/ai-scientist-experiment.md"
+      "path": "skills/experiment/SKILL.md"
     },
     "ai-scientist:experiment-step": {
       "type": "prompt",
-      "path": "skills/ai-scientist-experiment-step.md"
+      "path": "skills/experiment-step/SKILL.md"
     },
     "ai-scientist:plot": {
       "type": "prompt",
-      "path": "skills/ai-scientist-plot.md"
+      "path": "skills/plot/SKILL.md"
     },
     "ai-scientist:writeup": {
       "type": "prompt",
-      "path": "skills/ai-scientist-writeup.md"
+      "path": "skills/writeup/SKILL.md"
     },
     "ai-scientist:review": {
       "type": "prompt",
-      "path": "skills/ai-scientist-review.md"
+      "path": "skills/review/SKILL.md"
     },
     "ai-scientist:lit-search": {
       "type": "prompt",
-      "path": "skills/ai-scientist-lit-search.md"
+      "path": "skills/lit-search/SKILL.md"
     }
   }
 }

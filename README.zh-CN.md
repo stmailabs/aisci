@@ -75,10 +75,18 @@ sudo apt install texlive-full
 
 ### 安装
 
+**方式 A — 克隆后作为项目使用**（推荐首次使用）：
 ```bash
 git clone https://github.com/x-roocky/ai-scientist-skills.git
 cd ai-scientist-skills
 pip install -r requirements.txt
+```
+
+**方式 B — 作为 Claude Code 插件安装**：
+```bash
+git clone https://github.com/x-roocky/ai-scientist-skills.git
+pip install -r ai-scientist-skills/requirements.txt
+claude --plugin-dir ./ai-scientist-skills
 ```
 
 ### 验证环境
@@ -211,23 +219,34 @@ claude "/ai-scientist --workshop examples/ideas/i_cant_believe_its_not_better.md
 
 ```
 ai-scientist-skills/
-├── skills/                   # 8 个 Claude Code 技能提示文件（.md）
-├── tools/                    # Python 工具
-│   ├── config.py             #   配置加载
-│   ├── device_utils.py       #   CUDA / MPS / CPU 检测
-│   ├── search.py             #   文献搜索（S2 + WebSearch）
-│   ├── state_manager.py      #   实验状态持久化
-│   ├── metric_parser.py      #   指标提取
-│   ├── latex_compiler.py     #   pdflatex / bibtex 封装
-│   └── pdf_reader.py         #   PDF 文本提取
+├── .claude-plugin/
+│   └── plugin.json            # Agent Skills 插件清单
+├── skills/                    # 8 个技能（Agent Skills 标准格式）
+│   ├── pipeline/SKILL.md      #   主编排器
+│   ├── ideation/SKILL.md      #   研究创意生成
+│   ├── experiment/SKILL.md    #   4 阶段 BFTS 流水线
+│   ├── experiment-step/SKILL.md #  单次 BFTS 迭代
+│   ├── plot/SKILL.md          #   图表聚合
+│   ├── writeup/SKILL.md       #   LaTeX 论文生成
+│   ├── review/SKILL.md        #   同行评审
+│   └── lit-search/SKILL.md    #   文献搜索
+├── tools/                     # Python 工具
+│   ├── verify_setup.py        #   环境验证
+│   ├── config.py              #   配置加载
+│   ├── device_utils.py        #   CUDA / MPS / CPU 检测
+│   ├── search.py              #   文献搜索（S2 + WebSearch）
+│   ├── state_manager.py       #   实验状态持久化
+│   ├── metric_parser.py       #   指标提取
+│   ├── latex_compiler.py      #   pdflatex / bibtex 封装
+│   └── pdf_reader.py          #   PDF 文本提取
 ├── templates/
-│   ├── latex/icml/            #   ICML 2025 8 页模板
-│   ├── latex/icbinb/          #   ICBINB 4 页 workshop 模板
-│   ├── bfts_config.yaml       #   默认 BFTS 配置
-│   ├── idea_schema.json       #   研究创意 JSON 模式
-│   └── review_fewshot/        #   Few-shot 评审示例
-├── examples/ideas/            # 示例 workshop 描述和创意
-├── CLAUDE.md                  # Claude Code 项目说明
+│   ├── latex/icml/             #   ICML 2025 8 页模板
+│   ├── latex/icbinb/           #   ICBINB 4 页 workshop 模板
+│   ├── bfts_config.yaml        #   默认 BFTS 配置
+│   ├── idea_schema.json        #   研究创意 JSON 模式
+│   └── review_fewshot/         #   Few-shot 评审示例
+├── examples/ideas/             # 示例 workshop 描述和创意
+├── CLAUDE.md                   # Claude Code 项目说明
 ├── requirements.txt
 └── pyproject.toml
 ```

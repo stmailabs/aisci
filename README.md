@@ -75,10 +75,18 @@ sudo apt install texlive-full
 
 ### Install
 
+**Option A — Clone and use as project** (recommended for first-time users):
 ```bash
 git clone https://github.com/x-roocky/ai-scientist-skills.git
 cd ai-scientist-skills
 pip install -r requirements.txt
+```
+
+**Option B — Install as Claude Code plugin**:
+```bash
+git clone https://github.com/x-roocky/ai-scientist-skills.git
+pip install -r ai-scientist-skills/requirements.txt
+claude --plugin-dir ./ai-scientist-skills
 ```
 
 ### Verify
@@ -211,23 +219,34 @@ All tools are invoked via `python tools/<module>.py` from the project root.
 
 ```
 ai-scientist-skills/
-├── skills/                   # 8 Claude Code skill prompts (.md)
-├── tools/                    # Python utilities
-│   ├── config.py             #   Configuration loading
-│   ├── device_utils.py       #   CUDA / MPS / CPU detection
-│   ├── search.py             #   Literature search (S2 + WebSearch)
-│   ├── state_manager.py      #   Experiment state persistence
-│   ├── metric_parser.py      #   Metric extraction from stdout
-│   ├── latex_compiler.py     #   pdflatex / bibtex wrapper
-│   └── pdf_reader.py         #   PDF text extraction
+├── .claude-plugin/
+│   └── plugin.json            # Agent Skills plugin manifest
+├── skills/                    # 8 skills (Agent Skills standard)
+│   ├── pipeline/SKILL.md      #   Main orchestrator
+│   ├── ideation/SKILL.md      #   Research idea generation
+│   ├── experiment/SKILL.md    #   4-stage BFTS pipeline
+│   ├── experiment-step/SKILL.md #  Single BFTS iteration
+│   ├── plot/SKILL.md          #   Figure aggregation
+│   ├── writeup/SKILL.md       #   LaTeX paper generation
+│   ├── review/SKILL.md        #   Peer review
+│   └── lit-search/SKILL.md    #   Literature search
+├── tools/                     # Python utilities
+│   ├── verify_setup.py        #   Environment verification
+│   ├── config.py              #   Configuration loading
+│   ├── device_utils.py        #   CUDA / MPS / CPU detection
+│   ├── search.py              #   Literature search (S2 + WebSearch)
+│   ├── state_manager.py       #   Experiment state persistence
+│   ├── metric_parser.py       #   Metric extraction from stdout
+│   ├── latex_compiler.py      #   pdflatex / bibtex wrapper
+│   └── pdf_reader.py          #   PDF text extraction
 ├── templates/
-│   ├── latex/icml/            #   8-page ICML 2025 template
-│   ├── latex/icbinb/          #   4-page ICBINB workshop template
-│   ├── bfts_config.yaml       #   Default BFTS configuration
-│   ├── idea_schema.json       #   Research idea JSON schema
-│   └── review_fewshot/        #   Few-shot review examples
-├── examples/ideas/            # Example workshop descriptions & ideas
-├── CLAUDE.md                  # Claude Code project instructions
+│   ├── latex/icml/             #   8-page ICML 2025 template
+│   ├── latex/icbinb/           #   4-page ICBINB workshop template
+│   ├── bfts_config.yaml        #   Default BFTS configuration
+│   ├── idea_schema.json        #   Research idea JSON schema
+│   └── review_fewshot/         #   Few-shot review examples
+├── examples/ideas/             # Example workshop descriptions & ideas
+├── CLAUDE.md                   # Claude Code project instructions
 ├── requirements.txt
 └── pyproject.toml
 ```

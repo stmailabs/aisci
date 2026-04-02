@@ -1,9 +1,8 @@
 ---
-name: ai-scientist:plot
+name: plot
 description: Aggregate and generate publication-quality figures from experiment results across all BFTS stages.
 ---
 
-<command-name>ai-scientist:plot</command-name>
 
 # Plot Aggregation
 

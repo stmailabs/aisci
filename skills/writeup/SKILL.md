@@ -1,9 +1,8 @@
 ---
-name: ai-scientist:writeup
+name: writeup
 description: Generate a complete LaTeX research paper from experiment results — including citation gathering, figure descriptions, and iterative refinement.
 ---
 
-<command-name>ai-scientist:writeup</command-name>
 
 # Paper Writeup
 

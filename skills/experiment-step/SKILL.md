@@ -1,9 +1,8 @@
 ---
-name: ai-scientist:experiment-step
+name: experiment-step
 description: Execute a single Best-First Tree Search iteration — select parent node, generate experiment code, execute it, parse metrics, analyze plots, and update the journal.
 ---
 
-<command-name>ai-scientist:experiment-step</command-name>
 
 # BFTS Experiment Step
 

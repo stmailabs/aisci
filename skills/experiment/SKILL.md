@@ -1,9 +1,8 @@
 ---
-name: ai-scientist:experiment
+name: experiment
 description: Run the complete 4-stage Best-First Tree Search experiment pipeline — from initial implementation through ablation studies, with multi-agent parallel exploration.
 ---
 
-<command-name>ai-scientist:experiment</command-name>
 
 # BFTS Experiment Pipeline
 

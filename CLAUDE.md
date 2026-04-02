@@ -17,7 +17,7 @@ This project provides a complete AI research automation pipeline as Claude Code 
 
 ## Project Layout
 
-- `skills/` — Skill prompt files (.md)
+- `skills/` — Skill directories, each containing a `SKILL.md` (Agent Skills standard)
 - `tools/` — Python utilities (search, state management, device detection, metrics, LaTeX, PDF)
 - `templates/` — LaTeX templates (ICML, ICBINB), config, schema, review examples
 - `examples/` — Example workshop descriptions and research ideas

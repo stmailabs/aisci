@@ -1,9 +1,8 @@
 ---
-name: ai-scientist:ideation
+name: ideation
 description: Generate novel research ideas with literature search and novelty checking. Produces structured JSON ideas matching the AI Scientist schema.
 ---
 
-<command-name>ai-scientist:ideation</command-name>
 
 # Research Ideation
 

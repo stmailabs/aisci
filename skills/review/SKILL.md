@@ -1,9 +1,8 @@
 ---
-name: ai-scientist:review
+name: review
 description: Perform a structured peer review of a research paper — text analysis, figure quality assessment, and NeurIPS-format scoring.
 ---
 
-<command-name>ai-scientist:review</command-name>
 
 # Paper Review
 
