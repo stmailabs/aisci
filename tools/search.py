@@ -201,25 +201,22 @@ def search_papers(query: str, limit: int = 10) -> Optional[List[Dict]]:
 
 # ── CLI ──────────────────────────────────────────────────────────────────────
 
-if __name__ == "__main__":
+def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Search academic papers")
-    sub = parser.add_subparsers(dest="command")
-
-    # Default: search (also works without subcommand for backward compat)
     parser.add_argument("query", nargs="?", type=str, help="Search query")
     parser.add_argument("--limit", type=int, default=10, help="Max results")
     parser.add_argument(
         "--json", action="store_true", dest="as_json", help="Output as JSON"
     )
-
-    # check: test S2 API connectivity
-    sub.add_parser("check", help="Check S2 API availability")
+    parser.add_argument(
+        "--check", action="store_true", help="Check S2 API availability"
+    )
 
     args = parser.parse_args()
 
-    if args.command == "check":
+    if args.check:
         status = check_s2_api()
         print(json.dumps(status, indent=2))
         if not status["reachable"]:
@@ -243,3 +240,7 @@ if __name__ == "__main__":
             sys.exit(1)
     else:
         parser.print_help()
+
+
+if __name__ == "__main__":
+    main()

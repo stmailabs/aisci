@@ -93,15 +93,22 @@ else:
 print(f"Using device: {{DEVICE}}")
 
 # Reproducibility
-torch.manual_seed(42)
+import random
+import numpy as np
+
+SEED = int(os.environ.get("SEED", "42"))
+torch.manual_seed(SEED)
 if DEVICE.type == "cuda":
-    torch.cuda.manual_seed_all(42)
+    torch.cuda.manual_seed_all(SEED)
+np.random.seed(SEED)
+random.seed(SEED)
+print(f"Random seed: {{SEED}}")
 '''
 
 
 # ── CLI ──────────────────────────────────────────────────────────────────────
 
-if __name__ == "__main__":
+def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Detect PyTorch device")
@@ -120,3 +127,7 @@ if __name__ == "__main__":
         print(get_device_preamble())
     else:
         print(detect_device())
+
+
+if __name__ == "__main__":
+    main()

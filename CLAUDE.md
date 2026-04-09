@@ -1,61 +1,121 @@
-# AI Scientist Skills for Claude Code
+# AI Scientist (aisci)
 
-This project provides a complete AI research automation pipeline as Claude Code skills. It reimplements the [AI-Scientist-v2](https://github.com/SakanaAI/AI-Scientist) workflow using Claude Code as the central agent.
+## Environment
+
+This project uses `uv` with a `.venv` directory.
+
+**CRITICAL RULES:**
+1. **ALWAYS** prefix `ai-scientist-*` commands with `uv run`
+2. **ALWAYS** use `--config config.yaml` (NOT `templates/bfts_config.yaml`) -- the project config has the user's compute backend and settings
+3. **Never** `cd` into the plugin cache directory
+
+CLI commands:
+
+```bash
+uv run ai-scientist-verify
+uv run ai-scientist-device --info
+uv run ai-scientist-config --config config.yaml
+uv run ai-scientist-state status <exp_dir>
+uv run ai-scientist-search "query" --limit 10
+uv run ai-scientist-metrics <file>
+uv run ai-scientist-latex compile <dir>
+uv run ai-scientist-pdf <file>
+uv run ai-scientist-budget --config config.yaml
+```
+
+**Never** run `ai-scientist-*` commands without `uv run` -- they are installed in `.venv/bin/` and won't be found otherwise.
+
+**Never** `cd` into the plugin cache directory. Always run commands from this project directory.
 
 ## Skills
 
 | Command | Description |
 |---------|-------------|
-| `/ai-scientist` | Full pipeline: ideation → experiment → plot → writeup → review |
+| `/ai-scientist` | Full pipeline: ideation -> experiment -> plot -> writeup -> review |
 | `/ai-scientist:ideation` | Generate research ideas with literature search |
 | `/ai-scientist:experiment` | 4-stage BFTS experiment pipeline |
 | `/ai-scientist:experiment-step` | Single BFTS iteration (internal) |
+| `/ai-scientist:experiment-generate` | Code generation only (internal) |
+| `/ai-scientist:experiment-execute` | Execution only (internal) |
 | `/ai-scientist:plot` | Aggregate publication-quality figures |
 | `/ai-scientist:writeup` | Generate LaTeX paper with citations |
-| `/ai-scientist:review` | Structured peer review (NeurIPS format) |
+| `/ai-scientist:review` | Structured peer review (single + panel + Octopus) |
 | `/ai-scientist:lit-search` | Standalone literature search |
 | `/ai-scientist:workshop` | Interactive workshop description creator |
+| `/ai-scientist:octo-review` | Octopus multi-model panel paper review (optional) |
 
-## Project Layout
+## Installed Plugins
 
-- `skills/` — Skill directories, each containing a `SKILL.md` (Agent Skills standard)
-- `tools/` — Python utilities (search, state management, device detection, metrics, LaTeX, PDF)
-- `templates/` — LaTeX templates (ICML, ICBINB), config, schema, review examples
-- `examples/` — Example workshop descriptions and research ideas
-- `experiments/` — Generated experiment outputs (gitignored)
+### Core
+- **ai-scientist** -- Full research pipeline (ideation, experiment, writeup, review)
+- **octopus** -- Multi-model consensus review via claude-octopus (GPT-4o, Gemini, Claude panel)
 
-## Tool Usage
+### Optional
+- **scientific-skills** -- 134 scientific skills (databases, tools, analysis)
 
-All tools are invoked via `python3 tools/<module>.py` from the project root:
+### Extras
+- **superpowers** -- Planning before BFTS stages, brainstorming during ideation
+- **context7** -- Library docs lookup before experiment code generation
+- **code-review** -- Code quality review between BFTS stages (complements Octopus ML review)
+- **astral** -- ruff lint + format on experiment code before execution
+- **claude-hud** -- Status line display
 
-```bash
-python3 tools/verify_setup.py              # Verify all prerequisites
-python3 tools/device_utils.py              # Detect CUDA/MPS/CPU
-python3 tools/search.py "query"            # Search papers (S2 API)
-python3 tools/state_manager.py init --idea FILE --config FILE  # Init experiment
-python3 tools/state_manager.py status DIR            # Check experiment state
-python3 tools/state_manager.py select-nodes DIR STAGE # Pick nodes to expand
-python3 tools/state_manager.py add-node DIR STAGE ... # Record experiment result
-python3 tools/state_manager.py best-node DIR STAGE   # Get best node
-python3 tools/state_manager.py transition DIR S1 S2  # Move to next stage
-python3 tools/metric_parser.py FILE        # Parse metrics from output
-python3 tools/latex_compiler.py compile DIR # Compile LaTeX to PDF
-python3 tools/pdf_reader.py FILE           # Extract PDF text
-python3 tools/config.py --config FILE      # Load/display config
+## Octopus Integration
+
+When claude-octopus is installed and configured:
+- Multi-model consensus review (GPT-4o, Gemini, Claude -- 3+ models vote)
+- Stage-gate code review between BFTS stages
+- Panel paper review (3 independent model personas + synthesis)
+- Code-methods alignment (verifies paper claims match experiment code)
+- Rescue delegation for stuck experiments
+
+Control via config:
+```yaml
+octopus:
+  enabled: auto           # auto | true | false
+  stage_gate_review: true
+  panel_paper_review: true
+  code_alignment: true
+  rescue_on_stuck: true
+  venue: auto             # auto | neurips | icml | iclr | workshop
 ```
 
-## Environment
+## Scientific Skills Integration (Optional)
 
-- **Python**: 3.11+
-- **PyTorch**: 2.0+ (CUDA, MPS, or CPU)
-- **LaTeX**: pdflatex + bibtex (BasicTeX on macOS, texlive on Linux)
-- **Optional**: `S2_API_KEY` env var for Semantic Scholar API (higher rate limits)
+When claude-scientific-skills is installed:
+- Multi-database literature search during ideation
+- Enhanced scientific writing during writeup
+- Publication-quality figure formatting
+- Evidence quality assessment during review (GRADE framework)
 
-## Experiment Code Conventions
+Control via config:
+```yaml
+scientific_skills:
+  enabled: auto               # auto | true | false
+  enhanced_literature: true
+  enhanced_writing: true
+  enhanced_figures: true
+  enhanced_review: true
+```
 
-All generated experiment code must:
-1. Auto-detect device (CUDA/MPS/CPU) — never hardcode `cuda`
-2. Print metrics as `metric_name: value` for parsing
-3. Save plots to `figures/` directory
-4. Set random seeds for reproducibility
-5. Keep execution under 60 minutes
+## Review Pipeline
+
+The paper review has 3 independent layers:
+1. **Claude single reviewer** -- NeurIPS-style review (always runs)
+2. **Claude panel** -- 3 personas (Empiricist, Theorist, Practitioner) + synthesis
+3. **Octopus multi-model** -- GPT-4o + Gemini + Claude consensus + code-methods alignment (optional)
+
+Plus cross-review comparison that flags divergences >2 points.
+
+## Install / Update
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/stmailabs/aisci/main/scripts/install.sh | bash
+```
+
+## Run
+
+```bash
+claude '/ai-scientist --workshop examples/ideas/i_cant_believe_its_not_better.md'
+claude '/ai-scientist'  # interactive -- guides you through topic creation
+```

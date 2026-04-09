@@ -21,7 +21,7 @@ exp_name: run
 
 # ── Code execution ───────────────────────────────────────────────────────────
 exec:
-  timeout: 3600          # seconds per experiment run
+  timeout: 3600          # Max seconds per experiment run. Increase for large models.
   agent_file_name: runfile.py
 
 # ── Report generation ────────────────────────────────────────────────────────
@@ -34,28 +34,24 @@ experiment:
 # ── Agent (tree search) ─────────────────────────────────────────────────────
 agent:
   type: parallel
-  num_workers: 2         # parallel BFTS agents (configurable, default 2)
+  num_workers: 2
+  # How many parallel agents during BFTS tree search.
+  #   Single GPU: 1-2 | Multi-GPU: 2-4 | CPU-only: 2-4
 
-  # Per-stage iteration limits
   stages:
     stage1_max_iters: 20   # Initial implementation
     stage2_max_iters: 12   # Baseline tuning
     stage3_max_iters: 12   # Creative research
     stage4_max_iters: 18   # Ablation studies
 
-  # Fallback if stage-specific limits not provided
-  steps: 5
-
-  # Validation settings
   k_fold_validation: 1
   data_preview: false
   expose_prediction: false
 
-  # Tree search strategy
   search:
-    max_debug_depth: 3     # max consecutive debug retries
-    debug_prob: 0.5        # probability of retrying a failed node
-    num_drafts: 3          # initial root nodes per stage
+    max_debug_depth: 3     # Max consecutive debug retries
+    debug_prob: 0.5        # Probability of retrying a failed node
+    num_drafts: 3          # Initial root nodes per stage
 
 # ── Paper writeup ────────────────────────────────────────────────────────────
 writeup_type: icbinb       # "icbinb" (4-page) or "icml" (8-page)
@@ -65,3 +61,35 @@ num_writeup_reflections: 3
 # ── Pipeline control ─────────────────────────────────────────────────────────
 skip_writeup: false
 skip_review: false
+
+# ── Scientific skills (optional — requires claude-scientific-skills plugin) ──
+scientific_skills:
+  enabled: auto              # auto (use if plugin installed) | true | false
+  enhanced_literature: true  # /research-lookup, /database-lookup during ideation
+  enhanced_writing: true     # /scientific-writing + /citation-management during writeup
+  enhanced_figures: true     # /scientific-visualization during plot phase
+  enhanced_review: true      # /scientific-critical-thinking during review
+
+# ── Multi-model consensus (optional — requires claude-octopus plugin) ────────
+octopus:
+  enabled: auto                    # auto (use if plugin installed) | true | false
+  stage_gate_review: true          # Multi-model code review between BFTS stages
+  multi_model_paper_review: true   # Multi-provider debate on final paper
+  claim_verification: true         # Multi-model fact-checking of paper claims
+  rescue_on_stuck: true            # Multi-model diagnosis when experiments stuck
+  research_intensity: standard     # quick | standard | deep (for /octo:research)
+
+# ── Compute backend ──────────────────────────────────────────────────────────
+compute:
+  backend: ""                  # "" (prompt on first run) | "local" | "modal"
+  modal:
+    gpu: "A100"                # A100 | H100 | T4 | L4
+    timeout: 3600
+    image: "python:3.12"
+
+# ── Revision loop (optional) ────────────────────────────────────────────────
+revision:
+  enabled: false
+  score_threshold: 5
+  max_passes: 2
+  prompt_before_revision: true

@@ -8,6 +8,14 @@ description: Execute a single Best-First Tree Search iteration — select parent
 
 You are an AI researcher executing a single iteration of the Best-First Tree Search (BFTS) experiment pipeline. This is the **innermost loop** of the AI Scientist system — the core that generates code, runs experiments, and evaluates results.
 
+## Note
+
+This skill can optionally be replaced by two sub-skills for better failure recovery:
+- `/ai-scientist:experiment-generate` — produces code (saved even if execution fails later)
+- `/ai-scientist:experiment-execute` — runs code, parses metrics, records node
+
+The split skills allow retrying execution without regenerating code. The monolithic flow below is used by default when the experiment skill launches this as a subagent.
+
 ## Arguments (provided by the calling skill)
 
 - `--exp-dir <path>`: Experiment directory
@@ -21,25 +29,32 @@ Parse these from the user's message or arguments.
 
 ## Procedure
 
+### 0. Locate Plugin Root
+
+```bash
+```
+
 ### 1. Load Context
 
 Check the current journal state:
 ```bash
-python3 tools/state_manager.py journal-summary <exp_dir> <stage>
+uv run ai-scientist-state journal-summary <exp_dir> <stage>
 ```
 
 If a parent node ID is provided, read the parent node's details:
 ```bash
-python3 tools/state_manager.py node-info <exp_dir> <stage> <parent_id> --show-code
+uv run ai-scientist-state node-info <exp_dir> <stage> <parent_id> --show-code
 ```
 
 ### 2. Detect Device
 
 ```bash
-python3 tools/device_utils.py --preamble
+uv run ai-scientist-device --preamble
 ```
 
 ### 3. Generate Experiment Code
+
+**Library docs lookup** (if context7 plugin available — skip silently if not): Before writing code, use context7 to look up documentation for the key libraries you'll use (e.g., PyTorch, datasets, transformers). This ensures you use current APIs and avoid deprecated patterns.
 
 Based on the action type, generate a complete Python experiment script:
 
@@ -59,7 +74,7 @@ Based on the action type, generate a complete Python experiment script:
 #### For `improve` (enhance good parent):
 - Read the parent's metrics and analysis from node-info
 - If this is the **first node of a new stage** (parent from previous stage):
-  - Read the stage briefing: `python3 tools/state_manager.py stage-briefing <exp_dir> <previous_stage>`
+  - Read the stage briefing: `ai-scientist-state stage-briefing <exp_dir> <previous_stage>`
   - Write fresh code informed by the briefing's findings and metrics
   - Do NOT copy the parent's code — the goals have changed
 - If this is a **within-stage improvement**:
@@ -80,7 +95,7 @@ The generated code MUST:
 3. Save plots to `figures/` directory relative to the workspace
 4. Handle errors gracefully (try/except around training)
 5. Use `torch.no_grad()` for evaluation
-6. Set random seeds for reproducibility
+6. Set random seeds for reproducibility — the device preamble reads `SEED` from the environment (defaulting to 42), so no hardcoded seed values are needed in generated code
 7. Print dataset names when loaded: `Dataset: <name>`
 8. Keep execution time under 60 minutes
 
@@ -105,15 +120,35 @@ PYTHON_EOF
 mkdir -p <exp_dir>/workspace/figures
 ```
 
-Execute and capture output:
+**After writing, check for duplicates** before executing:
 ```bash
-cd <exp_dir>/workspace && timeout 3600 python3 runfile.py 2>&1 | tee <exp_dir>/logs/step_<N>_output.txt
+uv run ai-scientist-state dedup-check <exp_dir> <stage> --code <exp_dir>/workspace/runfile.py
 ```
+If `"duplicate": true`, skip execution and reuse the existing node's metrics. Report: "Skipped — identical code already executed (node <id>, metric: <value>)".
+
+**Lint and format** (if astral plugin available — skip silently if not):
+```bash
+ruff format <exp_dir>/workspace/runfile.py 2>/dev/null || true
+ruff check <exp_dir>/workspace/runfile.py --fix --silent 2>/dev/null || true
+```
+
+Execute and capture output:
+
+**If `compute.backend` is `local`** (default):
+```bash
+cd <exp_dir>/workspace && timeout 3600 uv run python3 runfile.py 2>&1 | tee <exp_dir>/logs/step_<N>_output.txt
+```
+
+**If `compute.backend` is `modal`**: Run on Modal cloud GPU using the modal runner:
+```bash
+uv run ai-scientist-modal-run <exp_dir>/workspace/runfile.py --gpu <compute.modal.gpu from config> --output-log <exp_dir>/logs/step_<N>_output.txt
+```
+This uploads the code, executes on a Modal GPU container, and streams output back. If Modal execution fails (auth, quota, etc.), fall back to local execution and warn the user.
 
 ### 5. Parse Metrics
 
 ```bash
-python3 tools/metric_parser.py <exp_dir>/logs/step_<N>_output.txt --json
+uv run ai-scientist-metrics <exp_dir>/logs/step_<N>_output.txt --json
 ```
 
 ### 6. Analyze Plots
@@ -130,7 +165,7 @@ If plots were generated in `<exp_dir>/workspace/figures/`:
 ### 8. Save Node to Journal
 
 ```bash
-python3 tools/state_manager.py add-node <exp_dir> <stage> \
+uv run ai-scientist-state add-node <exp_dir> <stage> \
     --plan "<brief plan description>" \
     --code <exp_dir>/workspace/runfile.py \
     --output-log <exp_dir>/logs/step_<N>_output.txt \

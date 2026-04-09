@@ -16,6 +16,14 @@
       "type": "prompt",
       "path": "skills/experiment-step/SKILL.md"
     },
+    "ai-scientist:experiment-generate": {
+      "type": "prompt",
+      "path": "skills/experiment-generate/SKILL.md"
+    },
+    "ai-scientist:experiment-execute": {
+      "type": "prompt",
+      "path": "skills/experiment-execute/SKILL.md"
+    },
     "ai-scientist:plot": {
       "type": "prompt",
       "path": "skills/plot/SKILL.md"
@@ -27,6 +35,10 @@
     "ai-scientist:review": {
       "type": "prompt",
       "path": "skills/review/SKILL.md"
+    },
+    "ai-scientist:octo-review": {
+      "type": "prompt",
+      "path": "skills/octo-review/SKILL.md"
     },
     "ai-scientist:lit-search": {
       "type": "prompt",

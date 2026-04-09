@@ -316,7 +316,7 @@ def _get_mean_value(m: Dict) -> Optional[float]:
 
 # ── CLI ──────────────────────────────────────────────────────────────────────
 
-if __name__ == "__main__":
+def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Parse metrics from experiment output")
@@ -354,3 +354,7 @@ if __name__ == "__main__":
                 final = parse_final_metrics(text)
                 if final:
                     print(f"\nBest metric: {final['name']} = {final['value']:.6f}")
+
+
+if __name__ == "__main__":
+    main()

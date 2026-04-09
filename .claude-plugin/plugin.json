@@ -1,7 +1,7 @@
 {
   "name": "ai-scientist",
-  "description": "The complete AI-Scientist-v2 research pipeline reimplemented as a Claude Code skills package, one agent does it all.",
-  "version": "0.1.0",
+  "description": "AI research pipeline with multi-model consensus via claude-octopus. Ideation, BFTS experiments, fact-checked paper writing, and multi-provider peer review.",
+  "version": "0.5.0",
   "author": {
     "name": "AI Scientist Skills Contributors"
   }

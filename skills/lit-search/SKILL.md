@@ -14,11 +14,16 @@ The user's message contains the search query. Extract it and search for relevant
 
 ## Procedure
 
+### 0. Locate Plugin Root
+
+```bash
+```
+
 1. **Parse the query** from the user's message or arguments.
 
 2. **Try Semantic Scholar first** by running:
    ```
-   python3 tools/search.py "<query>" --limit 10 --json
+   uv run ai-scientist-search "<query>" --limit 10 --json
    ```
    This uses the S2 API (with or without `S2_API_KEY`).
 

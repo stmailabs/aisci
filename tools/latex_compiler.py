@@ -228,7 +228,11 @@ def setup_latex_dir(
         Path to the target LaTeX directory.
     """
     if templates_base is None:
-        templates_base = str(Path(__file__).parent.parent / "templates" / "latex")
+        try:
+            from tools import TEMPLATES_DIR
+            templates_base = str(TEMPLATES_DIR / "latex")
+        except ImportError:
+            templates_base = str(Path(__file__).parent.parent / "templates" / "latex")
 
     src = Path(templates_base) / template_type
     dst = Path(target_dir)
@@ -255,7 +259,7 @@ def setup_latex_dir(
 
 # ── CLI ──────────────────────────────────────────────────────────────────────
 
-if __name__ == "__main__":
+def main():
     import argparse
     import json
 
@@ -303,3 +307,7 @@ if __name__ == "__main__":
 
     else:
         parser.print_help()
+
+
+if __name__ == "__main__":
+    main()

@@ -103,3 +103,13 @@ If the user seems unsure, share these tips:
 - Include concrete examples of relevant topics or past work
 - State what a good contribution looks like
 - A template is available at `examples/workshop_template.md`
+
+## Error Handling
+
+- **User provides an unclear or overly broad topic** → Ask targeted clarifying questions to narrow scope (e.g., "Which aspect of LLM safety interests you most: alignment, jailbreaking, or hallucination?"). Do not generate a vague description from ambiguous input.
+- **Generated description is too vague or generic** → Offer to refine specific sections. Ask the user which part feels weak and suggest concrete improvements (e.g., adding specific open problems, naming relevant datasets, or referencing recent work).
+- **Output directory does not exist or is not writable** → Create the directory with `mkdir -p`. If creation fails, report the permission error and suggest an alternative path.
+- **User is unsure how to answer a question** → Provide concrete examples from the research area and offer keyword suggestions. Reference the template at `examples/workshop_template.md` for inspiration.
+- **Generated file fails to save** → Report the exact error (disk full, permissions, invalid path) and offer to output the content directly so the user can save it manually.
+
+**Golden rule**: Never silently skip a failure. Either succeed clearly, fail loudly with a specific next step, or degrade gracefully with a fallback.

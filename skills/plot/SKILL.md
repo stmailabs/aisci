@@ -11,18 +11,23 @@ You are generating publication-quality figures for an AI research paper.
 ## Arguments
 
 - `--exp-dir <path>`: Experiment directory (required)
+- `--no-scientific-skills`: Skip enhanced figure formatting even if plugin is available
 
 Parse from the user's message.
 
 ## Procedure
 
+### 0. Locate Plugin Root
+
+```bash
+```
+
 ### 1. Load Experiment Context
 
 Read the experiment state and gather all stage summaries:
 ```bash
-python3 -c "
-import json, sys, os
-sys.path.insert(0, '.')
+uv run python3 -c "
+import json
 from tools.state_manager import load_experiment_state, load_journal, get_best_node, get_journal_summary
 state = load_experiment_state('<exp_dir>')
 for stage in ['stage1_initial', 'stage2_baseline', 'stage3_creative', 'stage4_ablation']:
@@ -80,7 +85,7 @@ cat > <exp_dir>/auto_plot_aggregator.py << 'PYTHON_EOF'
 <generated aggregator script>
 PYTHON_EOF
 
-cd <exp_dir> && python auto_plot_aggregator.py
+cd <exp_dir> && uv run python3 auto_plot_aggregator.py
 ```
 
 ### 5. Review Generated Figures
@@ -112,6 +117,62 @@ List the final figures:
 ls -la <exp_dir>/figures/
 ```
 
+## Enhanced Figures (Optional — claude-scientific-skills)
+
+**Skip if** `--no-scientific-skills` is set, plugin not installed, or config disables it.
+
+First, check if the claude-scientific-skills plugin is actually installed:
+```bash
+claude plugin list --json 2>/dev/null | python3 -c "import json,sys;any('sci-skills' in p['id'] for p in json.load(sys.stdin)) and print('SCIENTIFIC_PLUGIN_OK') or print('SCIENTIFIC_PLUGIN_MISSING')" 2>/dev/null
+```
+If `SCIENTIFIC_PLUGIN_MISSING`, skip this entire section silently.
+
+Then check config (if experiment config is available):
+```bash
+uv run python3 -c "
+import yaml
+try:
+    cfg = yaml.safe_load(open('<exp_dir>/config.yaml'))
+    enabled = str(cfg.get('scientific_skills', {}).get('enabled', 'auto')).lower()
+    figures = cfg.get('scientific_skills', {}).get('enhanced_figures', True)
+    print(f'enabled={enabled} enhanced_figures={figures}')
+except: print('enabled=auto enhanced_figures=True')
+" 2>/dev/null
+```
+If `enabled` is `false` or `enhanced_figures` is `false`, skip this section.
+
+When enabled, apply `/scientific-visualization` principles to the aggregator script for publication-quality output:
+
+1. **Journal-specific formatting**: When the target is known (ICML, NeurIPS, workshop):
+   - ICML/NeurIPS: Single column width 3.25", double column 6.75", min font 6pt at final size
+   - Workshop: Typically single column, more flexible sizing
+   - Use sans-serif fonts (Helvetica/Arial) for figure text
+
+2. **Colorblind-safe palettes**: Use the Okabe-Ito palette or viridis/plasma colormaps:
+   ```python
+   # Okabe-Ito palette (8 colors, universally distinguishable)
+   OKABE_ITO = ['#E69F00', '#56B4E9', '#009E73', '#F0E442', '#0072B2', '#D55E00', '#CC79A7', '#000000']
+   ```
+   Test all figures for grayscale legibility.
+
+3. **Statistical rigor in plots**:
+   - Always show error bars (standard error or 95% CI from multi-seed runs)
+   - Add significance markers where applicable (*, **, ***)
+   - Label sample sizes (n=X) in legends or captions
+   - For bar charts, show individual data points when n < 20
+
+4. **Multi-panel layout**: Use matplotlib `GridSpec` for consistent multi-panel figures:
+   - Label panels (a), (b), (c) in upper-left corners
+   - Share axes where appropriate
+   - Use consistent spacing and alignment
+
+5. **Export settings**:
+   - Vector PDF for all line/bar plots (infinite resolution)
+   - PNG at 600 DPI for scatter/heatmap plots with many points
+   - Ensure no text is clipped with `bbox_inches='tight'`
+
+Apply these principles when generating the aggregator script in Step 4, and verify compliance during the review in Step 5.
+
 ## Figure Guidelines
 
 - **Minimum 4 figures** for a complete paper
@@ -120,3 +181,14 @@ ls -la <exp_dir>/figures/
 - Prefer vector formats (PDF) for line plots
 - Use raster (PNG 300DPI) for complex plots with many points
 - Ensure all data is real (from experiment runs), never synthetic/fake
+
+## Error Handling
+
+- **No figures directory exists** → Report to the user that no experiment figures were found and skip plot aggregation. List which stages completed successfully so the user knows where the pipeline stopped.
+- **Matplotlib fails to render** → Check the display backend (`matplotlib.get_backend()`). Switch to the non-interactive `Agg` backend with `matplotlib.use('Agg')` before importing pyplot. Retry rendering.
+- **No experiment data available** → Report which stages completed and which have no data. Do not generate empty or placeholder figures.
+- **Aggregator script crashes** → Read the error output, fix the specific issue in the script, and retry (up to 3 rounds as specified in the iteration step).
+- **Generated figures are empty or all-white** → Check that data was loaded correctly and that plot calls have valid data arrays. Regenerate with explicit data validation before plotting.
+- **PDF export fails** → Fall back to PNG-only export at 300 DPI. Warn the user that vector figures are unavailable.
+
+**Golden rule**: Never silently skip a failure. Either succeed clearly, fail loudly with a specific next step, or degrade gracefully with a fallback.

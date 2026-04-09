@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-scientist-skills"
-version = "0.1.0"
-description = "AI Scientist research pipeline as Claude Code skills"
+version = "0.5.0"
+description = "AI Scientist research pipeline with multi-model consensus via claude-octopus"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {file = "LICENSE"}
@@ -37,10 +37,32 @@ dependencies = [
     "rich>=13.0",
 ]
 
+[project.optional-dependencies]
+modal = ["modal>=0.73"]
+
 [project.urls]
-Homepage = "https://github.com/x-roocky/ai-scientist-skills"
-Repository = "https://github.com/x-roocky/ai-scientist-skills"
-Issues = "https://github.com/x-roocky/ai-scientist-skills/issues"
+Homepage = "https://github.com/stmailabs/aisci"
+Repository = "https://github.com/stmailabs/aisci"
+Issues = "https://github.com/stmailabs/aisci/issues"
 
 [tool.setuptools.packages.find]
 include = ["tools*"]
+
+[tool.setuptools.package-data]
+tools = [
+    "templates/**/*",
+    "templates/*",
+]
+
+[project.scripts]
+ai-scientist-verify = "tools.verify_setup:main"
+ai-scientist-device = "tools.device_utils:main"
+ai-scientist-config = "tools.config:main"
+ai-scientist-search = "tools.search:main"
+ai-scientist-state = "tools.state_manager:main"
+ai-scientist-metrics = "tools.metric_parser:main"
+ai-scientist-latex = "tools.latex_compiler:main"
+ai-scientist-pdf = "tools.pdf_reader:main"
+ai-scientist-budget = "tools.budget_estimator:main"
+ai-scientist-dashboard = "tools.dashboard:main"
+ai-scientist-modal-run = "tools.modal_runner:main"

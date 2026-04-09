@@ -14,10 +14,17 @@ You are an ambitious, creative AI/ML researcher generating novel research propos
 - `--num-ideas <N>`: Number of ideas to generate (default: 3)
 - `--num-reflections <N>`: Reflection rounds per idea (default: 5)
 - `--output <path>`: Output JSON file path (default: same dir as workshop file, `.json` extension)
+- `--config <path>`: Path to config YAML for reading feature toggles (optional, defaults to `config.yaml`)
+- `--no-scientific-skills`: Skip enhanced multi-database literature search even if plugin is available
 
 Parse these from the user's message.
 
 ## Procedure
+
+### 0. Locate Plugin Root
+
+```bash
+```
 
 ### 1. Load Context
 
@@ -33,6 +40,8 @@ For each new idea (up to `num-ideas`):
 
 #### a. Brainstorm
 
+If the superpowers plugin is available, use `/superpowers:brainstorming` to explore the research space before generating ideas. This helps discover non-obvious directions and interdisciplinary connections.
+
 Think of a novel research direction within the workshop scope. Consider:
 - What are open problems in this area?
 - What surprising negative results or failure modes exist?
@@ -43,7 +52,7 @@ Think of a novel research direction within the workshop scope. Consider:
 
 Before finalizing, search for related work to check novelty:
 ```bash
-python3 tools/search.py "<your proposed topic keywords>" --limit 10 --json
+uv run ai-scientist-search "<your proposed topic keywords>" --limit 10 --json
 ```
 
 If S2 returns no results, use the WebSearch tool to search `arxiv.org` for related papers.
@@ -96,9 +105,10 @@ Collect all ideas into a JSON array and save to the output file:
 
 Also validate against the schema:
 ```bash
-python3 -c "
+uv run python3 -c "
 import json
-with open('templates/idea_schema.json') as f:
+from tools import TEMPLATES_DIR
+with open(str(TEMPLATES_DIR / 'idea_schema.json')) as f:
     schema = json.load(f)
 # Basic validation of required fields
 required = schema['required']
@@ -122,9 +132,67 @@ Each idea should:
 - Target **top venue quality** — significant contribution to the field
 - Include **3+ experiments** with measurable outcomes
 
+## Enhanced Literature Search (Optional — claude-scientific-skills)
+
+**Skip if** `--no-scientific-skills` is set, plugin not installed, or config disables it.
+
+First, check if the claude-scientific-skills plugin is actually installed:
+```bash
+claude plugin list --json 2>/dev/null | python3 -c "import json,sys;any('sci-skills' in p['id'] for p in json.load(sys.stdin)) and print('SCIENTIFIC_PLUGIN_OK') or print('SCIENTIFIC_PLUGIN_MISSING')" 2>/dev/null
+```
+If `SCIENTIFIC_PLUGIN_MISSING`, skip this entire section silently.
+
+Then check if the feature is enabled in the active config (use `--config` path if provided, else default):
+```bash
+uv run python3 -c "
+import yaml
+from tools import TEMPLATES_DIR
+try:
+    cfg = yaml.safe_load(open('<config_path>'))
+    enabled = str(cfg.get('scientific_skills', {}).get('enabled', 'auto')).lower()
+    lit = cfg.get('scientific_skills', {}).get('enhanced_literature', True)
+    print(f'scientific_skills.enabled={enabled}')
+    print(f'scientific_skills.enhanced_literature={lit}')
+except: print('scientific_skills.enabled=auto\nscientific_skills.enhanced_literature=True')
+" 2>/dev/null
+```
+Where `<config_path>` is the `--config` argument if provided, otherwise `config.yaml` in the project root.
+If `enabled` is `false` or `enhanced_literature` is `false`, skip this section.
+
+When enabled, run all available search backends in parallel using Agent subagents for faster results:
+
+```
+Agent 1: ai-scientist-search "<topic keywords>" --limit 10 --json
+Agent 2: /research-lookup "<topic keywords and hypothesis>"
+Agent 3: /paper-lookup "<specific query>" (if available — skip silently if not)
+```
+
+Launch all agents simultaneously. Wait for all to complete. Merge results:
+- Deduplicate papers by title similarity (fuzzy match)
+- Prioritize by citation count (highest first)
+- Use the combined evidence for novelty assessment and idea refinement
+
+If `/paper-lookup` or `/database-lookup` are not available (e.g., using claude-scientific-writer which has research-lookup but not these), those agents simply return empty results — the parallel dispatch handles missing skills gracefully.
+
+For biology/chemistry/materials topics, also launch:
+```
+Agent 4: /database-lookup "<entity name>" (if available — skip silently if not)
+```
+This queries 78+ databases (UniProt, STRING, Reactome, PubChem, ChEMBL, etc.) for mechanistic evidence.
+
 ## Important Notes
 
 - Always perform at least one literature search per idea before finalizing.
 - The `Name` field must be lowercase with underscores, no spaces.
 - Experiments should use publicly available datasets (preferably from HuggingFace).
 - Consider both positive and negative expected outcomes.
+
+## Error Handling
+
+- **S2 API fails or returns no results** → Fall back to WebSearch on `arxiv.org` and `scholar.google.com` for literature search. Do not skip novelty checking.
+- **No novel ideas found after reflection rounds** → Broaden the research scope: relax constraints, explore adjacent subfields, or combine ideas from different domains within the workshop description.
+- **Idea JSON fails schema validation** → Re-validate each idea against `idea_schema.json`, identify missing or malformed fields, and regenerate only the invalid ideas.
+- **Workshop description file not found or empty** → Report the missing file path to the user and halt. Do not generate ideas without a research scope.
+- **Existing ideas file is corrupted JSON** → Warn the user, back up the corrupted file, and start fresh rather than silently overwriting.
+
+**Golden rule**: Never silently skip a failure. Either succeed clearly, fail loudly with a specific next step, or degrade gracefully with a fallback.

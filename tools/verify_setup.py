@@ -161,6 +161,64 @@ def check_claude_code() -> bool:
         return False
 
 
+def check_octopus() -> bool:
+    """Check if claude-octopus plugin is installed with at least one external provider."""
+    plugin_found = False
+    claude_bin = shutil.which("claude")
+    if claude_bin:
+        try:
+            result = subprocess.run(
+                [claude_bin, "plugin", "list", "--json"],
+                capture_output=True, text=True, timeout=15,
+            )
+            import json as _json
+            plugins = _json.loads(result.stdout) if result.returncode == 0 else []
+            plugin_found = any("octo" in p.get("id", "") for p in plugins)
+        except Exception:
+            pass
+    if not plugin_found:
+        print(f"  {WARN} claude-octopus not found — standard pipeline only (optional)")
+        print(f"      Install: claude plugin install octo@nyldn-plugins")
+        return False
+    # Check for external providers (at least one improves multi-model reviews)
+    providers = []
+    if shutil.which("codex"):
+        providers.append("Codex")
+    if shutil.which("gemini"):
+        providers.append("Gemini")
+    if providers:
+        print(f"  {CHECK} claude-octopus plugin + {', '.join(providers)} — multi-model reviews available")
+    else:
+        print(f"  {WARN} claude-octopus found but no external providers (Codex CLI, Gemini CLI)")
+        print(f"      Install at least one: npm install -g @openai/codex  or  pip install google-gemini-cli")
+    return True
+
+
+def check_scientific_skills() -> bool:
+    """Check if claude-scientific-skills plugin is installed (optional enhancement)."""
+    # Check via official Claude plugin API
+    plugin_found = False
+    claude_bin = shutil.which("claude")
+    if claude_bin:
+        try:
+            result = subprocess.run(
+                [claude_bin, "plugin", "list", "--json"],
+                capture_output=True, text=True, timeout=15,
+            )
+            import json as _json
+            plugins = _json.loads(result.stdout) if result.returncode == 0 else []
+            plugin_found = any("scientific" in p.get("id", "") for p in plugins)
+        except Exception:
+            pass
+    if plugin_found:
+        print(f"  {CHECK} claude-scientific-skills plugin — enhanced literature, writing, and review available")
+        return True
+    else:
+        print(f"  {WARN} claude-scientific-skills not found — standard pipeline only (optional)")
+        print(f"      Install: claude install gh:stamate/claude-scientific-skills")
+        return False
+
+
 def main():
     print()
     print("AI Scientist Skills — Environment Check")
@@ -201,6 +259,16 @@ def main():
     print("\n[Claude Code]")
     if not check_claude_code():
         errors += 1
+
+    # Octopus (optional enhancement)
+    print("\n[Multi-Model Consensus (optional)]")
+    if not check_octopus():
+        warnings += 1
+
+    # Scientific skills (optional enhancement)
+    print("\n[Scientific Skills (optional)]")
+    if not check_scientific_skills():
+        warnings += 1
 
     # Summary
     print("\n" + "=" * 42)
