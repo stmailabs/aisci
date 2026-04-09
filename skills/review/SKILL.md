@@ -31,12 +31,12 @@ The review has two tiers:
 ### 1. Extract Paper Text
 
 ```bash
-uv run ai-scientist-pdf <pdf_path>
+uv run aisci-pdf <pdf_path>
 ```
 
 If the paper is long, also extract by sections:
 ```bash
-uv run ai-scientist-pdf <pdf_path> --sections
+uv run aisci-pdf <pdf_path> --sections
 ```
 
 ### 2. Load Review Examples
@@ -304,7 +304,7 @@ If `OCTOPUS_AVAILABLE`, enhance the review with a multi-model debate:
 
 1. **Read Octopus config values** from the experiment's config (if `--exp-dir` provided):
    ```bash
-   uv run ai-scientist-config --config <exp_dir>/config.yaml 2>/dev/null
+   uv run aisci-config --config <exp_dir>/config.yaml 2>/dev/null
    ```
    Extract:
    - `octopus.enabled` — if `"false"`, **skip this entire step** even if the plugin is installed
@@ -318,10 +318,10 @@ If `OCTOPUS_AVAILABLE`, enhance the review with a multi-model debate:
 
    If `octopus.claim_verification` is `true` and `--exp-dir` is provided, save the promoted best solution to a known path and use that:
    ```bash
-   uv run ai-scientist-state save-best <exp_dir> stage4_ablation 2>/dev/null || \
-   uv run ai-scientist-state save-best <exp_dir> stage3_creative 2>/dev/null || \
-   uv run ai-scientist-state save-best <exp_dir> stage2_baseline 2>/dev/null || \
-   uv run ai-scientist-state save-best <exp_dir> stage1_initial
+   uv run aisci-state save-best <exp_dir> stage4_ablation 2>/dev/null || \
+   uv run aisci-state save-best <exp_dir> stage3_creative 2>/dev/null || \
+   uv run aisci-state save-best <exp_dir> stage2_baseline 2>/dev/null || \
+   uv run aisci-state save-best <exp_dir> stage1_initial
    ```
    This writes `best_solution_<id>.py` to the stage's state directory and prints the file path. Use the printed directory (e.g., `<exp_dir>/state/stage4_ablation/`) as `<best_solution_dir>`.
 

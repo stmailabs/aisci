@@ -9,11 +9,11 @@
   },
   "plugins": [
     {
-      "name": "ai-scientist",
+      "name": "aisci",
       "description": "Full AI research pipeline with multi-model consensus: ideation, BFTS experiment, fact-checked writeup, and multi-provider peer review.",
       "source": "./",
       "skills": [
-        "./skills/ai-scientist",
+        "./skills/aisci",
         "./skills/ideation",
         "./skills/experiment",
         "./skills/experiment-step",

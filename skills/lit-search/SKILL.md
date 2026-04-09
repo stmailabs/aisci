@@ -23,7 +23,7 @@ The user's message contains the search query. Extract it and search for relevant
 
 2. **Try Semantic Scholar first** by running:
    ```
-   uv run ai-scientist-search "<query>" --limit 10 --json
+   uv run aisci-search "<query>" --limit 10 --json
    ```
    This uses the S2 API (with or without `S2_API_KEY`).
 

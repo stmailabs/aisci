@@ -38,24 +38,24 @@ Parse these from the user's message.
 
 **New experiment** (no `--exp-dir`):
 ```bash
-uv run ai-scientist-state init --idea <idea_path> --config <config_path>
+uv run aisci-state init --idea <idea_path> --config <config_path>
 ```
 This prints the experiment directory path. Use it as `<exp_dir>` in all subsequent commands.
 
 **Resume** (with `--exp-dir`):
 ```bash
-uv run ai-scientist-state status <exp_dir>
+uv run aisci-state status <exp_dir>
 ```
 Read the current stage and completed stages to know where to resume.
 
 ### 2. Detect Device
 ```bash
-uv run ai-scientist-device --info
+uv run aisci-device --info
 ```
 
 ### 3. Load Config
 ```bash
-uv run ai-scientist-config --config <config_path>
+uv run aisci-config --config <config_path>
 ```
 
 Key values:
@@ -90,11 +90,11 @@ For each stage (1 through 4):
 #### a. Create Initial Draft Nodes
 
 For the FIRST stage only, create `num_drafts` (default 3) draft nodes.
-Launch `num_workers` Agent subagents in parallel, each running `/ai-scientist:experiment-step`:
+Launch `num_workers` Agent subagents in parallel, each running `/aisci:experiment-step`:
 
 ```
-Agent 1: /ai-scientist:experiment-step --exp-dir <exp_dir> --stage <stage> --action draft --task-desc "<task_desc>" --stage-goals "<goals>"
-Agent 2: /ai-scientist:experiment-step --exp-dir <exp_dir> --stage <stage> --action draft --task-desc "<task_desc>" --stage-goals "<goals>"
+Agent 1: /aisci:experiment-step --exp-dir <exp_dir> --stage <stage> --action draft --task-desc "<task_desc>" --stage-goals "<goals>"
+Agent 2: /aisci:experiment-step --exp-dir <exp_dir> --stage <stage> --action draft --task-desc "<task_desc>" --stage-goals "<goals>"
 ```
 
 For stages 2-4, carry the best node from the previous stage as the starting point (no new drafts).
@@ -107,19 +107,19 @@ Repeat until stage completion (max_iters reached or completion criteria met):
 
 1. **Select candidate nodes** for expansion:
    ```bash
-   uv run ai-scientist-state select-nodes <exp_dir> <stage>
+   uv run aisci-state select-nodes <exp_dir> <stage>
    ```
    This returns JSON with candidate node IDs and recommended actions (debug/improve).
 
 2. **Launch parallel agents** for each candidate:
    ```
-   Agent 1: /ai-scientist:experiment-step --exp-dir <exp_dir> --stage <stage> --parent-id <node_id_1> --action <debug|improve> --task-desc "<task_desc>" --stage-goals "<goals>"
-   Agent 2: /ai-scientist:experiment-step --exp-dir <exp_dir> --stage <stage> --parent-id <node_id_2> --action <debug|improve> --task-desc "<task_desc>" --stage-goals "<goals>"
+   Agent 1: /aisci:experiment-step --exp-dir <exp_dir> --stage <stage> --parent-id <node_id_1> --action <debug|improve> --task-desc "<task_desc>" --stage-goals "<goals>"
+   Agent 2: /aisci:experiment-step --exp-dir <exp_dir> --stage <stage> --parent-id <node_id_2> --action <debug|improve> --task-desc "<task_desc>" --stage-goals "<goals>"
    ```
 
 3. **Check stage completion** after each batch:
    ```bash
-   uv run ai-scientist-state journal-summary <exp_dir> <stage>
+   uv run aisci-state journal-summary <exp_dir> <stage>
    ```
 
    **Stage 1 completion**: `good_nodes > 0`
@@ -133,7 +133,7 @@ When a stage completes, run the best node's code with multiple random seeds to v
 
 1. Get the best node's code:
    ```bash
-   uv run ai-scientist-state best-node <exp_dir> <stage> --show-code
+   uv run aisci-state best-node <exp_dir> <stage> --show-code
    ```
 
 2. Run it with different seeds (42, 123, 456). First check if the code uses the SEED env var (new style) or hardcoded seeds (old style):
@@ -160,12 +160,12 @@ When a stage completes:
 
 1. Record the transition:
    ```bash
-   uv run ai-scientist-state transition <exp_dir> <current_stage> <next_stage>
+   uv run aisci-state transition <exp_dir> <current_stage> <next_stage>
    ```
 
 2. Generate a stage briefing for the next stage:
    ```bash
-   uv run ai-scientist-state stage-briefing <exp_dir> <current_stage>
+   uv run aisci-state stage-briefing <exp_dir> <current_stage>
    ```
    This returns a JSON summary with: best metrics, datasets tested, key findings, and failed approaches.
 
@@ -184,7 +184,7 @@ When a stage completes:
 
 Before the Octopus stage-gate review, run a general code review on the best node's code using `/code-review`. This catches code quality issues (dead code, unused variables, readability) that complement Octopus's ML-specific review. Save the best solution first, then review:
 ```bash
-uv run ai-scientist-state save-best <exp_dir> <current_stage>
+uv run aisci-state save-best <exp_dir> <current_stage>
 ```
 Then invoke `/code-review` on the saved file. Apply any quick fixes before proceeding.
 
@@ -206,7 +206,7 @@ Then invoke `/code-review` on the saved file. Apply any quick fixes before proce
 
 2. **If available**, get the promoted best solution from the just-completed stage:
    ```bash
-   uv run ai-scientist-state save-best <exp_dir> <completed_stage>
+   uv run aisci-state save-best <exp_dir> <completed_stage>
    ```
    Where `<completed_stage>` is the stage that just finished (e.g., `stage1_initial`), NOT the next stage.
    This writes the best node's code to `<exp_dir>/state/<current_stage>/best_solution_<id>.py`. Use that file path for the review:
@@ -251,7 +251,7 @@ If Stage 1 has used 80%+ of `stage1_max_iters` with zero good nodes, delegate di
 
 1. **Collect recent error information**:
    ```bash
-   uv run ai-scientist-state journal-summary <exp_dir> stage1_initial
+   uv run aisci-state journal-summary <exp_dir> stage1_initial
    ```
    Note the total nodes and buggy count.
 
@@ -294,22 +294,22 @@ After all 4 stages complete:
 
 1. Print final summary:
    ```bash
-   uv run ai-scientist-state status <exp_dir>
-   uv run ai-scientist-state journal-summary <exp_dir> stage1_initial
-   uv run ai-scientist-state journal-summary <exp_dir> stage2_baseline
-   uv run ai-scientist-state journal-summary <exp_dir> stage3_creative
-   uv run ai-scientist-state journal-summary <exp_dir> stage4_ablation
+   uv run aisci-state status <exp_dir>
+   uv run aisci-state journal-summary <exp_dir> stage1_initial
+   uv run aisci-state journal-summary <exp_dir> stage2_baseline
+   uv run aisci-state journal-summary <exp_dir> stage3_creative
+   uv run aisci-state journal-summary <exp_dir> stage4_ablation
    ```
 
 2. Copy best results:
    ```bash
-   uv run ai-scientist-state save-best <exp_dir> stage4_ablation
+   uv run aisci-state save-best <exp_dir> stage4_ablation
    cp -r <exp_dir>/workspace/figures/* <exp_dir>/figures/ 2>/dev/null || true
    ```
 
 3. Mark experiment complete:
    ```bash
-   uv run ai-scientist-state update-state <exp_dir> --phase complete --status experiment_done
+   uv run aisci-state update-state <exp_dir> --phase complete --status experiment_done
    ```
 
 ## Error Handling
@@ -353,8 +353,8 @@ If one worker finishes all tasks but another is still running:
 ### Experiment Resumption
 
 If the pipeline crashes mid-stage:
-- Use `uv run ai-scientist-state status <exp_dir>` to check current state
-- Use `uv run ai-scientist-state journal-summary <exp_dir> <stage>` to see completed iterations
+- Use `uv run aisci-state status <exp_dir>` to check current state
+- Use `uv run aisci-state journal-summary <exp_dir> <stage>` to see completed iterations
 - Resume by re-running the experiment skill with `--exp-dir <exp_dir>` — it will detect the current stage and continue from where it left off
 
 ## Progress Reporting

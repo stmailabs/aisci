@@ -1,5 +1,5 @@
 ---
-name: ai-scientist
+name: aisci
 description: Run the complete AI Scientist pipeline — from research ideation through experiment execution, paper writing, and peer review. Orchestrates all sub-skills.
 ---
 
@@ -8,7 +8,7 @@ description: Run the complete AI Scientist pipeline — from research ideation t
 
 You are the AI Scientist, an autonomous research agent that generates novel research ideas, conducts experiments, writes papers, and performs peer review. This orchestrates the complete pipeline by invoking sub-skills.
 
-> **Runtime**: This project uses `uv` with a `.venv` in the **project directory**. ALL `ai-scientist-*` CLI commands must be called with `uv run` from the project directory, e.g. `uv run ai-scientist-verify`. **Never cd into the plugin cache directory** — always run commands from the user's project working directory.
+> **Runtime**: This project uses `uv` with a `.venv` in the **project directory**. ALL `aisci-*` CLI commands must be called with `uv run` from the project directory, e.g. `uv run aisci-verify`. **Never cd into the plugin cache directory** — always run commands from the user's project working directory.
 
 ## Arguments
 
@@ -44,16 +44,16 @@ Parse from the user's message. If none of `--workshop`, `--idea`, or `--exp-dir`
 
 ### Phase 0: Setup
 
-**Important**: This project uses `uv` with a `.venv` in the project directory. All CLI tools (`ai-scientist-verify`, `ai-scientist-state`, etc.) are installed in `.venv/bin/`. Use `uv run` to invoke them, or activate the venv first. If `.venv` doesn't exist or tools are missing, tell the user to run:
+**Important**: This project uses `uv` with a `.venv` in the project directory. All CLI tools (`aisci-verify`, `aisci-state`, etc.) are installed in `.venv/bin/`. Use `uv run` to invoke them, or activate the venv first. If `.venv` doesn't exist or tools are missing, tell the user to run:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/stamate/ai-scientist-skills/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/stamate/aisci-skills/main/scripts/install.sh | bash
 ```
 
 0. **Verify environment and load config**:
    ```bash
-   uv run ai-scientist-verify
-   uv run ai-scientist-device --info
-   uv run ai-scientist-config --config config.yaml
+   uv run aisci-verify
+   uv run aisci-device --info
+   uv run aisci-config --config config.yaml
    ```
    If verify fails, **stop and guide the user** through fixing the issues.
 
@@ -71,7 +71,7 @@ curl -fsSL https://raw.githubusercontent.com/stamate/ai-scientist-skills/main/sc
 
 2. **Check LaTeX** (optional, only needed for writeup):
    ```bash
-   uv run ai-scientist-latex check
+   uv run aisci-latex check
    ```
    Warn if pdflatex or bibtex is missing — the experiment can still run, paper generation will be skipped.
 
@@ -140,15 +140,15 @@ Read `compute.backend` and `compute.modal.gpu` from the config output to fill th
 3. If `--idea` provided, validate the idea JSON has required fields per `templates/idea_schema.json`
 4. Test S2 API connectivity:
    ```bash
-   uv run ai-scientist-search check
+   uv run aisci-search check
    ```
 5. Test LaTeX compilation with a minimal document:
    ```bash
-   uv run ai-scientist-latex check
+   uv run aisci-latex check
    ```
 6. Report estimated token budget (if budget_estimator.py exists):
    ```bash
-   uv run ai-scientist-budget --config <config_path> 2>/dev/null || echo "Budget estimator not available"
+   uv run aisci-budget --config <config_path> 2>/dev/null || echo "Budget estimator not available"
    ```
 7. Print summary:
    ```
@@ -172,7 +172,7 @@ Read `compute.backend` and `compute.modal.gpu` from the config output to fill th
 
 If the user didn't specify a research topic, invoke the workshop skill to guide them interactively:
 ```
-/ai-scientist:workshop
+/aisci:workshop
 ```
 
 This will ask the user about their research interests and generate a workshop description `.md` file. Use the output path as `--workshop` for the next phase.
@@ -183,7 +183,7 @@ This will ask the user about their research interests and generate a workshop de
 
 Invoke the ideation skill. Pass the config path so it can read feature toggles, and `--no-scientific-skills` if disabled:
 ```
-/ai-scientist:ideation --workshop <workshop_path> --num-ideas 3 --config <config_path>
+/aisci:ideation --workshop <workshop_path> --num-ideas 3 --config <config_path>
 ```
 Add `--no-scientific-skills` if `SCIENTIFIC_SKILLS_ENABLED` is false.
 
@@ -213,12 +213,12 @@ Invoke the experiment skill. If Octopus is disabled, pass `--no-octopus` so expe
 
 **If `OCTOPUS_ENABLED`**:
 ```
-/ai-scientist:experiment --idea <selected_idea_path> --config <config_path>
+/aisci:experiment --idea <selected_idea_path> --config <config_path>
 ```
 
 **If NOT `OCTOPUS_ENABLED`**:
 ```
-/ai-scientist:experiment --idea <selected_idea_path> --config <config_path> --no-octopus
+/aisci:experiment --idea <selected_idea_path> --config <config_path> --no-octopus
 ```
 
 This runs the 4-stage BFTS pipeline and produces experiment results.
@@ -229,7 +229,7 @@ This runs the 4-stage BFTS pipeline and produces experiment results.
 
 Invoke the plot skill. If scientific skills are disabled, pass `--no-scientific-skills`:
 ```
-/ai-scientist:plot --exp-dir <exp_dir>
+/aisci:plot --exp-dir <exp_dir>
 ```
 Add `--no-scientific-skills` if `SCIENTIFIC_SKILLS_ENABLED` is false.
 
@@ -241,7 +241,7 @@ This generates publication-quality figures from all experiment stages.
 
 Invoke the writeup skill. If scientific skills are disabled, pass `--no-scientific-skills`:
 ```
-/ai-scientist:writeup --exp-dir <exp_dir> --type <icbinb|icml>
+/aisci:writeup --exp-dir <exp_dir> --type <icbinb|icml>
 ```
 Add `--no-scientific-skills` if `SCIENTIFIC_SKILLS_ENABLED` is false.
 
@@ -255,18 +255,18 @@ Run the review skill. Forward `--no-octopus` if Octopus is disabled so the revie
 
 **If `OCTOPUS_ENABLED`**:
 ```
-/ai-scientist:review --pdf <exp_dir>/paper.pdf --exp-dir <exp_dir>
+/aisci:review --pdf <exp_dir>/paper.pdf --exp-dir <exp_dir>
 ```
 The review skill's Step 11 automatically invokes `/octo:debate` for multi-model paper review with code-methods alignment.
 
 **If NOT `OCTOPUS_ENABLED`**:
 ```
-/ai-scientist:review --pdf <exp_dir>/paper.pdf --exp-dir <exp_dir> --no-octopus
+/aisci:review --pdf <exp_dir>/paper.pdf --exp-dir <exp_dir> --no-octopus
 ```
 
 Also forward `--no-scientific-skills` if `SCIENTIFIC_SKILLS_ENABLED` is false, to skip Step 9 (evidence assessment) in the review skill.
 
-The `/ai-scientist:octo-review` skill exists for standalone use when the user wants multi-model review without the Claude review.
+The `/aisci:octo-review` skill exists for standalone use when the user wants multi-model review without the Claude review.
 
 ### Phase 6.5: Revision Loop (Optional)
 
@@ -301,14 +301,14 @@ For each revision pass (up to max_passes):
    - Everything else -> re-run writeup (default)
 
 5. **Re-run affected phases**:
-   - If experiments need re-running: invoke `/ai-scientist:experiment --exp-dir <exp_dir> --start-stage <N>` where N is the stage number (1=initial, 2=baseline, 3=creative, 4=ablation)
-   - If plots need re-running: invoke `/ai-scientist:plot --exp-dir <exp_dir>`
-   - If writeup needs re-running: invoke `/ai-scientist:writeup --exp-dir <exp_dir> --type <type>` with the review feedback injected into the task context
+   - If experiments need re-running: invoke `/aisci:experiment --exp-dir <exp_dir> --start-stage <N>` where N is the stage number (1=initial, 2=baseline, 3=creative, 4=ablation)
+   - If plots need re-running: invoke `/aisci:plot --exp-dir <exp_dir>`
+   - If writeup needs re-running: invoke `/aisci:writeup --exp-dir <exp_dir> --type <type>` with the review feedback injected into the task context
    - Always re-run writeup after any experiment/plot changes
 
 6. **Re-review**:
    - First, preserve the current review: `cp <exp_dir>/review.json <exp_dir>/review_pass<N>.json`
-   - Then re-run: invoke `/ai-scientist:review --pdf <exp_dir>/paper.pdf --exp-dir <exp_dir>`
+   - Then re-run: invoke `/aisci:review --pdf <exp_dir>/paper.pdf --exp-dir <exp_dir>`
    - The review skill writes the new review to `review.json`, which is checked in the next loop iteration check
 
 7. **Report revision**: "Revision pass <N> complete. New score: <new_score>/10 (was: <old_score>/10)"
@@ -372,5 +372,5 @@ The pipeline supports resuming at any phase:
 - For a quick test run, use `--config` with reduced iterations:
   ```bash
   # Create a test config with fewer iterations
-  uv run ai-scientist-config --set agent.stages.stage1_max_iters=5 agent.stages.stage2_max_iters=3 agent.stages.stage3_max_iters=3 agent.stages.stage4_max_iters=3
+  uv run aisci-config --set agent.stages.stage1_max_iters=5 agent.stages.stage2_max_iters=3 agent.stages.stage3_max_iters=3 agent.stages.stage4_max_iters=3
   ```

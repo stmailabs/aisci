@@ -52,7 +52,7 @@ Think of a novel research direction within the workshop scope. Consider:
 
 Before finalizing, search for related work to check novelty:
 ```bash
-uv run ai-scientist-search "<your proposed topic keywords>" --limit 10 --json
+uv run aisci-search "<your proposed topic keywords>" --limit 10 --json
 ```
 
 If S2 returns no results, use the WebSearch tool to search `arxiv.org` for related papers.
@@ -177,7 +177,7 @@ If `enabled` is `false` or `enhanced_literature` is `false`, skip this section.
 When enabled, run all available search backends in parallel using Agent subagents for faster results:
 
 ```
-Agent 1: ai-scientist-search "<topic keywords>" --limit 10 --json
+Agent 1: aisci-search "<topic keywords>" --limit 10 --json
 Agent 2: /research-lookup "<topic keywords and hypothesis>"
 Agent 3: /paper-lookup "<specific query>" (if available — skip silently if not)
 ```

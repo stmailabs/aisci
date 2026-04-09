@@ -88,11 +88,11 @@ After saving, suggest:
 ```
 Your workshop description is ready. You can now run the full pipeline:
 
-  claude "/ai-scientist --workshop <output_path>"
+  claude "/aisci --workshop <output_path>"
 
 Or generate ideas first:
 
-  claude "/ai-scientist:ideation --workshop <output_path>"
+  claude "/aisci:ideation --workshop <output_path>"
 ```
 
 ## Tips for Good Workshop Descriptions

@@ -26,7 +26,7 @@ You execute a previously generated experiment script, parse its output, and reco
 
 Determine step number from journal:
 ```bash
-uv run ai-scientist-state journal-summary <exp_dir> <stage>
+uv run aisci-state journal-summary <exp_dir> <stage>
 ```
 
 Lint and format before running (if astral plugin available — skip silently if not):
@@ -44,14 +44,14 @@ cd <exp_dir>/workspace && timeout 3600 uv run python3 runfile.py 2>&1 | tee <exp
 
 **If `compute.backend` is `modal`**: Run on Modal cloud GPU:
 ```bash
-uv run ai-scientist-modal-run <exp_dir>/workspace/runfile.py --gpu <compute.modal.gpu from config> --output-log <exp_dir>/logs/step_<N>_output.txt
+uv run aisci-modal-run <exp_dir>/workspace/runfile.py --gpu <compute.modal.gpu from config> --output-log <exp_dir>/logs/step_<N>_output.txt
 ```
 If Modal fails, fall back to local and warn the user.
 
 ### 2. Parse Metrics
 
 ```bash
-uv run ai-scientist-metrics <exp_dir>/logs/step_<N>_output.txt --json
+uv run aisci-metrics <exp_dir>/logs/step_<N>_output.txt --json
 ```
 
 ### 3. Analyze Plots
@@ -65,7 +65,7 @@ Buggy if: exception raised, no valid metrics, timeout, NaN/Inf in metrics.
 ### 5. Save Node
 
 ```bash
-uv run ai-scientist-state add-node <exp_dir> <stage> \
+uv run aisci-state add-node <exp_dir> <stage> \
     --plan "<plan>" \
     --code <exp_dir>/workspace/runfile.py \
     --output-log <exp_dir>/logs/step_<N>_output.txt \

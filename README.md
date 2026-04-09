@@ -41,7 +41,7 @@ The result is a simpler, more portable system that runs the same research pipeli
 ## Core Pipeline
 
 ```
-/ai-scientist --workshop examples/ideas/i_cant_believe_its_not_better.md
+/aisci --workshop examples/ideas/i_cant_believe_its_not_better.md
 ```
 
 One command triggers the full lifecycle:
@@ -77,14 +77,14 @@ sudo apt install texlive-full
 
 **Option A — Clone and use as project** (recommended for first-time users):
 ```bash
-git clone https://github.com/x-roocky/ai-scientist-skills.git
+git clone https://github.com/x-roocky/aisci-skills.git
 cd ai-scientist-skills
 pip install -r requirements.txt
 ```
 
 **Option B — Install as Claude Code plugin** (via marketplace):
 ```
-/plugin marketplace add x-roocky/ai-scientist-skills
+/plugin marketplace add x-roocky/aisci-skills
 /plugin install ai-scientist@ai-scientist-skills
 ```
 
@@ -100,7 +100,7 @@ Checks Python version, all dependencies, PyTorch device, LaTeX tools, and Claude
 
 ```bash
 # Full pipeline
-claude "/ai-scientist --workshop examples/ideas/i_cant_believe_its_not_better.md"
+claude "/aisci --workshop examples/ideas/i_cant_believe_its_not_better.md"
 ```
 
 ## Getting Started Scenarios
@@ -110,7 +110,7 @@ After installation, describe your task in natural language. Below are realistic 
 ### 1. Create Your Research Topic (Start Here)
 
 **You say:**
-> /ai-scientist:workshop
+> /aisci:workshop
 
 **What happens:**
 - Claude asks you a few questions about your research interest,
@@ -122,7 +122,7 @@ A template is also available at `examples/workshop_template.md` if you prefer to
 ### 2. Run the Full Pipeline
 
 **You say:**
-> /ai-scientist --workshop examples/ideas/i_cant_believe_its_not_better.md
+> /aisci --workshop examples/ideas/i_cant_believe_its_not_better.md
 
 **What happens:**
 - Claude generates 3 research ideas with literature search,
@@ -134,7 +134,7 @@ A template is also available at `examples/workshop_template.md` if you prefer to
 ### 2. Just Generate Research Ideas
 
 **You say:**
-> /ai-scientist:ideation --workshop examples/ideas/i_cant_believe_its_not_better.md --num-ideas 5
+> /aisci:ideation --workshop examples/ideas/i_cant_believe_its_not_better.md --num-ideas 5
 
 **Typical output:**
 - 5 structured research proposals in JSON format,
@@ -144,7 +144,7 @@ A template is also available at `examples/workshop_template.md` if you prefer to
 ### 3. Search Academic Literature
 
 **You say:**
-> /ai-scientist:lit-search "vision language models for robotics"
+> /aisci:lit-search "vision language models for robotics"
 
 **Typical output:**
 - ranked papers with titles, authors, venues, citation counts,
@@ -153,7 +153,7 @@ A template is also available at `examples/workshop_template.md` if you prefer to
 ### 4. Review an Existing Paper
 
 **You say:**
-> /ai-scientist:review --pdf path/to/paper.pdf
+> /aisci:review --pdf path/to/paper.pdf
 
 **Typical output:**
 - structured review with strengths, weaknesses, and questions,
@@ -169,30 +169,30 @@ A template is also available at `examples/workshop_template.md` if you prefer to
 
 | Type | Skill | Description |
 |------|-------|-------------|
-| Orchestrator | `/ai-scientist` | Full pipeline: ideation → experiment → plot → writeup → review. |
+| Orchestrator | `/aisci` | Full pipeline: ideation → experiment → plot → writeup → review. |
 
 ### Research & Experimentation
 
 | Type | Skill | Description |
 |------|-------|-------------|
-| Skill | `/ai-scientist:ideation` | Generate novel research ideas with literature search and novelty checking. |
-| Skill | `/ai-scientist:experiment` | 4-stage BFTS experiment orchestrator with parallel agent exploration. |
-| Internal | `/ai-scientist:experiment-step` | Single BFTS iteration: generate code, execute, parse metrics, analyze plots. |
-| Skill | `/ai-scientist:plot` | Aggregate publication-quality figures from experiment results. |
+| Skill | `/aisci:ideation` | Generate novel research ideas with literature search and novelty checking. |
+| Skill | `/aisci:experiment` | 4-stage BFTS experiment orchestrator with parallel agent exploration. |
+| Internal | `/aisci:experiment-step` | Single BFTS iteration: generate code, execute, parse metrics, analyze plots. |
+| Skill | `/aisci:plot` | Aggregate publication-quality figures from experiment results. |
 
 ### Writing & Review
 
 | Type | Skill | Description |
 |------|-------|-------------|
-| Skill | `/ai-scientist:writeup` | Generate LaTeX paper with automated citation gathering and iterative refinement. |
-| Skill | `/ai-scientist:review` | Structured peer review with NeurIPS-format scoring and figure assessment. |
+| Skill | `/aisci:writeup` | Generate LaTeX paper with automated citation gathering and iterative refinement. |
+| Skill | `/aisci:review` | Structured peer review with NeurIPS-format scoring and figure assessment. |
 
 ### Utilities
 
 | Type | Skill | Description |
 |------|-------|-------------|
-| Utility | `/ai-scientist:lit-search` | Standalone academic literature search (Semantic Scholar + WebSearch fallback). |
-| Utility | `/ai-scientist:workshop` | Interactive guide to create a workshop/topic description file. |
+| Utility | `/aisci:lit-search` | Standalone academic literature search (Semantic Scholar + WebSearch fallback). |
+| Utility | `/aisci:workshop` | Interactive guide to create a workshop/topic description file. |
 
 ## Experiment Pipeline
 
@@ -296,7 +296,7 @@ writeup_type: icbinb       # "icbinb" (4-page) or "icml" (8-page)
 | Aspect | AI-Scientist-v2 | AI Scientist Skills |
 |--------|-----------------|---------------------|
 | Agent | Multiple LLM APIs (OpenAI, Anthropic, Gemini, etc.) | Claude Code only |
-| Interface | Python CLI scripts | Claude Code skills (`/ai-scientist`) |
+| Interface | Python CLI scripts | Claude Code skills (`/aisci`) |
 | Device support | CUDA only | CUDA, MPS (Apple Silicon), CPU |
 | State management | In-memory + pickle | JSON files (human-readable, resumable) |
 | Vision (VLM) | Separate VLM API calls | Claude's native vision |

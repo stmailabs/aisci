@@ -59,7 +59,7 @@ ok "Marketplaces added and updated"
 # 4. Install plugins at project scope
 echo "[3/6] Plugins..."
 core_plugins=(
-    "ai-scientist@aisci"
+    "aisci@aisci"
     "octo@nyldn-plugins"
 )
 optional_plugins=(
@@ -105,7 +105,7 @@ done
 
 if [ $core_ok -lt 2 ]; then
     warn "Some core plugins failed. Install manually:"
-    echo "    claude plugin install ai-scientist@aisci --scope project"
+    echo "    claude plugin install aisci@aisci --scope project"
     echo "    claude plugin install octo@nyldn-plugins --scope project"
 fi
 
@@ -113,7 +113,7 @@ fi
 echo "[4/6] Compute backend..."
 # Copy default config to project if not present
 if [ ! -f config.yaml ]; then
-    uv run ai-scientist-config --config templates/bfts_config.yaml > config.yaml 2>/dev/null
+    uv run aisci-config --config templates/bfts_config.yaml > config.yaml 2>/dev/null
 fi
 current_backend=$(grep "backend:" config.yaml | head -1 | awk '{print $2}' | tr -d "'" | tr -d '"')
 
@@ -134,7 +134,7 @@ if [ -z "$current_backend" ] || [ "$current_backend" = "''" ] || [ "$current_bac
                 uv pip install modal --quiet 2>&1 || {
                     fail "Failed to install modal package"
                     warn "Defaulting to local"
-                    uv run ai-scientist-config --config config.yaml --set compute.backend=local --save >/dev/null 2>&1
+                    uv run aisci-config --config config.yaml --set compute.backend=local --save >/dev/null 2>&1
                     ok "Local (modal install failed)"
                     choice="done"
                 }
@@ -194,12 +194,12 @@ if [ -z "$current_backend" ] || [ "$current_backend" = "''" ] || [ "$current_bac
                     4) gpu="L4" ;;
                     *) gpu="A100" ;;
                 esac
-                uv run ai-scientist-config --config config.yaml --set compute.backend=modal compute.modal.gpu="$gpu" --save >/dev/null 2>&1
+                uv run aisci-config --config config.yaml --set compute.backend=modal compute.modal.gpu="$gpu" --save >/dev/null 2>&1
                 ok "Modal.com with $gpu GPU"
             fi
             ;;
         *)
-            uv run ai-scientist-config --config config.yaml --set compute.backend=local --save >/dev/null 2>&1
+            uv run aisci-config --config config.yaml --set compute.backend=local --save >/dev/null 2>&1
             ok "Local"
             ;;
     esac
@@ -209,10 +209,10 @@ fi
 
 # 6. Verify installation
 echo "[5/6] Verifying..."
-if uv run ai-scientist-verify --quiet 2>/dev/null; then
+if uv run aisci-verify --quiet 2>/dev/null; then
     ok "Environment check passed"
 else
-    warn "Some checks failed — run 'uv run ai-scientist-verify' for details"
+    warn "Some checks failed — run 'uv run aisci-verify' for details"
 fi
 
 # 7. Create/update CLAUDE.md
@@ -225,25 +225,25 @@ cat > CLAUDE.md << 'CLAUDEMD'
 This project uses `uv` with a `.venv` directory.
 
 **CRITICAL RULES:**
-1. **ALWAYS** prefix `ai-scientist-*` commands with `uv run`
+1. **ALWAYS** prefix `aisci-*` commands with `uv run`
 2. **ALWAYS** use `--config config.yaml` (NOT `templates/bfts_config.yaml`) — the project config has the user's compute backend and settings
 3. **Never** `cd` into the plugin cache directory
 
 CLI commands:
 
 ```bash
-uv run ai-scientist-verify
-uv run ai-scientist-device --info
-uv run ai-scientist-config --config config.yaml
-uv run ai-scientist-state status <exp_dir>
-uv run ai-scientist-search "query" --limit 10
-uv run ai-scientist-metrics <file>
-uv run ai-scientist-latex compile <dir>
-uv run ai-scientist-pdf <file>
-uv run ai-scientist-budget --config config.yaml
+uv run aisci-verify
+uv run aisci-device --info
+uv run aisci-config --config config.yaml
+uv run aisci-state status <exp_dir>
+uv run aisci-search "query" --limit 10
+uv run aisci-metrics <file>
+uv run aisci-latex compile <dir>
+uv run aisci-pdf <file>
+uv run aisci-budget --config config.yaml
 ```
 
-**Never** run `ai-scientist-*` commands without `uv run` — they are installed in `.venv/bin/` and won't be found otherwise.
+**Never** run `aisci-*` commands without `uv run` — they are installed in `.venv/bin/` and won't be found otherwise.
 
 **Never** `cd` into the plugin cache directory. Always run commands from this project directory.
 
@@ -251,23 +251,23 @@ uv run ai-scientist-budget --config config.yaml
 
 | Command | Description |
 |---------|-------------|
-| `/ai-scientist` | Full pipeline: ideation → experiment → plot → writeup → review |
-| `/ai-scientist:ideation` | Generate research ideas with literature search |
-| `/ai-scientist:experiment` | 4-stage BFTS experiment pipeline |
-| `/ai-scientist:experiment-step` | Single BFTS iteration (internal) |
-| `/ai-scientist:experiment-generate` | Code generation only (internal) |
-| `/ai-scientist:experiment-execute` | Execution only (internal) |
-| `/ai-scientist:plot` | Aggregate publication-quality figures |
-| `/ai-scientist:writeup` | Generate LaTeX paper with citations |
-| `/ai-scientist:review` | Structured peer review (single + panel + Octopus) |
-| `/ai-scientist:lit-search` | Standalone literature search |
-| `/ai-scientist:workshop` | Interactive workshop description creator |
-| `/ai-scientist:octo-review` | Octopus multi-model panel paper review (optional) |
+| `/aisci` | Full pipeline: ideation → experiment → plot → writeup → review |
+| `/aisci:ideation` | Generate research ideas with literature search |
+| `/aisci:experiment` | 4-stage BFTS experiment pipeline |
+| `/aisci:experiment-step` | Single BFTS iteration (internal) |
+| `/aisci:experiment-generate` | Code generation only (internal) |
+| `/aisci:experiment-execute` | Execution only (internal) |
+| `/aisci:plot` | Aggregate publication-quality figures |
+| `/aisci:writeup` | Generate LaTeX paper with citations |
+| `/aisci:review` | Structured peer review (single + panel + Octopus) |
+| `/aisci:lit-search` | Standalone literature search |
+| `/aisci:workshop` | Interactive workshop description creator |
+| `/aisci:octo-review` | Octopus multi-model panel paper review (optional) |
 
 ## Installed Plugins
 
 ### Core
-- **ai-scientist** — Full research pipeline (ideation, experiment, writeup, review)
+- **aisci** — Full research pipeline (ideation, experiment, writeup, review)
 - **octopus** — Multi-model consensus review via claude-octopus (GPT-4o, Gemini, Claude panel)
 
 ### Optional
@@ -336,8 +336,8 @@ curl -fsSL https://raw.githubusercontent.com/stmailabs/aisci/main/scripts/instal
 ## Run
 
 ```bash
-claude '/ai-scientist --workshop examples/ideas/i_cant_believe_its_not_better.md'
-claude '/ai-scientist'  # interactive — guides you through topic creation
+claude '/aisci --workshop examples/ideas/i_cant_believe_its_not_better.md'
+claude '/aisci'  # interactive — guides you through topic creation
 ```
 CLAUDEMD
 ok "CLAUDE.md created (always regenerated to stay current)"
@@ -346,5 +346,5 @@ ok "CLAUDE.md created (always regenerated to stay current)"
 echo ""
 echo "=== Done ==="
 echo ""
-echo "  Verify: uv run ai-scientist-verify"
-echo "  Run:    claude '/ai-scientist'"
+echo "  Verify: uv run aisci-verify"
+echo "  Run:    claude '/aisci'"

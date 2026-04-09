@@ -2,7 +2,7 @@
 # requires-python = ">=3.11"
 # dependencies = ["pyyaml"]
 # ///
-"""Pre-commit validation for ai-scientist-skills.
+"""Pre-commit validation for aisci-skills.
 
 Usage: uv run scripts/pre-commit-check.py
 """

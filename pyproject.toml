@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ai-scientist-skills"
+name = "aisci-skills"
 version = "0.5.0"
 description = "AI Scientist research pipeline with multi-model consensus via claude-octopus"
 readme = "README.md"
@@ -55,14 +55,14 @@ tools = [
 ]
 
 [project.scripts]
-ai-scientist-verify = "tools.verify_setup:main"
-ai-scientist-device = "tools.device_utils:main"
-ai-scientist-config = "tools.config:main"
-ai-scientist-search = "tools.search:main"
-ai-scientist-state = "tools.state_manager:main"
-ai-scientist-metrics = "tools.metric_parser:main"
-ai-scientist-latex = "tools.latex_compiler:main"
-ai-scientist-pdf = "tools.pdf_reader:main"
-ai-scientist-budget = "tools.budget_estimator:main"
-ai-scientist-dashboard = "tools.dashboard:main"
-ai-scientist-modal-run = "tools.modal_runner:main"
+aisci-verify = "tools.verify_setup:main"
+aisci-device = "tools.device_utils:main"
+aisci-config = "tools.config:main"
+aisci-search = "tools.search:main"
+aisci-state = "tools.state_manager:main"
+aisci-metrics = "tools.metric_parser:main"
+aisci-latex = "tools.latex_compiler:main"
+aisci-pdf = "tools.pdf_reader:main"
+aisci-budget = "tools.budget_estimator:main"
+aisci-dashboard = "tools.dashboard:main"
+aisci-modal-run = "tools.modal_runner:main"

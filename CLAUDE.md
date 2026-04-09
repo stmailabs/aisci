@@ -5,25 +5,25 @@
 This project uses `uv` with a `.venv` directory.
 
 **CRITICAL RULES:**
-1. **ALWAYS** prefix `ai-scientist-*` commands with `uv run`
+1. **ALWAYS** prefix `aisci-*` commands with `uv run`
 2. **ALWAYS** use `--config config.yaml` (NOT `templates/bfts_config.yaml`) -- the project config has the user's compute backend and settings
 3. **Never** `cd` into the plugin cache directory
 
 CLI commands:
 
 ```bash
-uv run ai-scientist-verify
-uv run ai-scientist-device --info
-uv run ai-scientist-config --config config.yaml
-uv run ai-scientist-state status <exp_dir>
-uv run ai-scientist-search "query" --limit 10
-uv run ai-scientist-metrics <file>
-uv run ai-scientist-latex compile <dir>
-uv run ai-scientist-pdf <file>
-uv run ai-scientist-budget --config config.yaml
+uv run aisci-verify
+uv run aisci-device --info
+uv run aisci-config --config config.yaml
+uv run aisci-state status <exp_dir>
+uv run aisci-search "query" --limit 10
+uv run aisci-metrics <file>
+uv run aisci-latex compile <dir>
+uv run aisci-pdf <file>
+uv run aisci-budget --config config.yaml
 ```
 
-**Never** run `ai-scientist-*` commands without `uv run` -- they are installed in `.venv/bin/` and won't be found otherwise.
+**Never** run `aisci-*` commands without `uv run` -- they are installed in `.venv/bin/` and won't be found otherwise.
 
 **Never** `cd` into the plugin cache directory. Always run commands from this project directory.
 
@@ -31,23 +31,23 @@ uv run ai-scientist-budget --config config.yaml
 
 | Command | Description |
 |---------|-------------|
-| `/ai-scientist` | Full pipeline: ideation -> experiment -> plot -> writeup -> review |
-| `/ai-scientist:ideation` | Generate research ideas with literature search |
-| `/ai-scientist:experiment` | 4-stage BFTS experiment pipeline |
-| `/ai-scientist:experiment-step` | Single BFTS iteration (internal) |
-| `/ai-scientist:experiment-generate` | Code generation only (internal) |
-| `/ai-scientist:experiment-execute` | Execution only (internal) |
-| `/ai-scientist:plot` | Aggregate publication-quality figures |
-| `/ai-scientist:writeup` | Generate LaTeX paper with citations |
-| `/ai-scientist:review` | Structured peer review (single + panel + Octopus) |
-| `/ai-scientist:lit-search` | Standalone literature search |
-| `/ai-scientist:workshop` | Interactive workshop description creator |
-| `/ai-scientist:octo-review` | Octopus multi-model panel paper review (optional) |
+| `/aisci` | Full pipeline: ideation -> experiment -> plot -> writeup -> review |
+| `/aisci:ideation` | Generate research ideas with literature search |
+| `/aisci:experiment` | 4-stage BFTS experiment pipeline |
+| `/aisci:experiment-step` | Single BFTS iteration (internal) |
+| `/aisci:experiment-generate` | Code generation only (internal) |
+| `/aisci:experiment-execute` | Execution only (internal) |
+| `/aisci:plot` | Aggregate publication-quality figures |
+| `/aisci:writeup` | Generate LaTeX paper with citations |
+| `/aisci:review` | Structured peer review (single + panel + Octopus) |
+| `/aisci:lit-search` | Standalone literature search |
+| `/aisci:workshop` | Interactive workshop description creator |
+| `/aisci:octo-review` | Octopus multi-model panel paper review (optional) |
 
 ## Installed Plugins
 
 ### Core
-- **ai-scientist** -- Full research pipeline (ideation, experiment, writeup, review)
+- **aisci** -- Full research pipeline (ideation, experiment, writeup, review)
 - **octopus** -- Multi-model consensus review via claude-octopus (GPT-4o, Gemini, Claude panel)
 
 ### Optional
@@ -116,6 +116,6 @@ curl -fsSL https://raw.githubusercontent.com/stmailabs/aisci/main/scripts/instal
 ## Run
 
 ```bash
-claude '/ai-scientist --workshop examples/ideas/i_cant_believe_its_not_better.md'
-claude '/ai-scientist'  # interactive -- guides you through topic creation
+claude '/aisci --workshop examples/ideas/i_cant_believe_its_not_better.md'
+claude '/aisci'  # interactive -- guides you through topic creation
 ```

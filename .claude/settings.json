@@ -1,50 +1,50 @@
 {
   "skills": {
-    "ai-scientist": {
+    "aisci": {
       "type": "prompt",
-      "path": "skills/ai-scientist/SKILL.md"
+      "path": "skills/aisci/SKILL.md"
     },
-    "ai-scientist:ideation": {
+    "aisci:ideation": {
       "type": "prompt",
       "path": "skills/ideation/SKILL.md"
     },
-    "ai-scientist:experiment": {
+    "aisci:experiment": {
       "type": "prompt",
       "path": "skills/experiment/SKILL.md"
     },
-    "ai-scientist:experiment-step": {
+    "aisci:experiment-step": {
       "type": "prompt",
       "path": "skills/experiment-step/SKILL.md"
     },
-    "ai-scientist:experiment-generate": {
+    "aisci:experiment-generate": {
       "type": "prompt",
       "path": "skills/experiment-generate/SKILL.md"
     },
-    "ai-scientist:experiment-execute": {
+    "aisci:experiment-execute": {
       "type": "prompt",
       "path": "skills/experiment-execute/SKILL.md"
     },
-    "ai-scientist:plot": {
+    "aisci:plot": {
       "type": "prompt",
       "path": "skills/plot/SKILL.md"
     },
-    "ai-scientist:writeup": {
+    "aisci:writeup": {
       "type": "prompt",
       "path": "skills/writeup/SKILL.md"
     },
-    "ai-scientist:review": {
+    "aisci:review": {
       "type": "prompt",
       "path": "skills/review/SKILL.md"
     },
-    "ai-scientist:octo-review": {
+    "aisci:octo-review": {
       "type": "prompt",
       "path": "skills/octo-review/SKILL.md"
     },
-    "ai-scientist:lit-search": {
+    "aisci:lit-search": {
       "type": "prompt",
       "path": "skills/lit-search/SKILL.md"
     },
-    "ai-scientist:workshop": {
+    "aisci:workshop": {
       "type": "prompt",
       "path": "skills/workshop/SKILL.md"
     }

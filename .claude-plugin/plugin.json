@@ -1,5 +1,5 @@
 {
-  "name": "ai-scientist",
+  "name": "aisci",
   "description": "AI research pipeline with multi-model consensus via claude-octopus. Ideation, BFTS experiments, fact-checked paper writing, and multi-provider peer review.",
   "version": "0.5.0",
   "author": {

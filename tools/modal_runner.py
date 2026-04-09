@@ -17,7 +17,7 @@ def run_on_modal(code_path: str, gpu: str = "T4", timeout: int = 3600) -> dict:
 
     code = Path(code_path).read_text()
 
-    app = modal.App("ai-scientist-experiment")
+    app = modal.App("aisci-experiment")
 
     image = (
         modal.Image.debian_slim(python_version="3.12")

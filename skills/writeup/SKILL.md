@@ -46,7 +46,7 @@ Read the best experiment code from the final completed stage. Read stage summari
 ### 2. Setup LaTeX Directory
 
 ```bash
-uv run ai-scientist-latex setup <exp_dir>/latex --type <icbinb|icml>
+uv run aisci-latex setup <exp_dir>/latex --type <icbinb|icml>
 ```
 
 Create empty references file:
@@ -64,7 +64,7 @@ cp <exp_dir>/figures/*.png <exp_dir>/figures/*.pdf <exp_dir>/latex/figures/ 2>/d
 
 First, check search backend availability:
 ```bash
-uv run ai-scientist-search check
+uv run aisci-search check
 ```
 
 If S2 API is unreachable or rate-limited, **use WebSearch exclusively** for all citation searches below. Do not waste rounds retrying a broken S2 backend.
@@ -75,7 +75,7 @@ For each round:
 2. Formulate 2-3 targeted search queries for the needed citations
 3. Search for papers — try S2 first, fall back to WebSearch immediately on failure:
    ```bash
-   uv run ai-scientist-search "<citation query>" --limit 5 --json
+   uv run aisci-search "<citation query>" --limit 5 --json
    ```
    If this returns no results or exits with error, use **WebSearch** to search `arxiv.org`, `scholar.google.com`, or `semanticscholar.org` directly. Extract title, authors, year, venue from the search results.
 
@@ -156,10 +156,10 @@ Read through the section and extract every factual claim into one of these categ
 
 | Category | Example | Verification source |
 |----------|---------|-------------------|
-| **Metric claim** | "achieves 92.3% accuracy" | Experiment journal: `uv run ai-scientist-state best-node <exp_dir> <stage>` |
+| **Metric claim** | "achieves 92.3% accuracy" | Experiment journal: `uv run aisci-state best-node <exp_dir> <stage>` |
 | **Method detail** | "3-layer CNN with dropout 0.3" | Experiment code: `cat <exp_dir>/state/<stage>/best_solution_*.py` |
 | **Hyperparameter** | "trained for 100 epochs at lr=3e-4" | Experiment logs: `cat <exp_dir>/logs/step_*_output.txt` |
-| **Citation claim** | "Smith et al. showed X outperforms Y" | S2/CrossRef: `uv run ai-scientist-search "Smith <topic>" --json` or CrossRef MCP |
+| **Citation claim** | "Smith et al. showed X outperforms Y" | S2/CrossRef: `uv run aisci-search "Smith <topic>" --json` or CrossRef MCP |
 | **SOTA comparison** | "current SOTA is 91.2%" | Live search: use WebSearch or S2 to find actual current SOTA |
 | **Figure reference** | "as shown in Figure 2, loss decreases" | Actual figure: Read the PNG with the Read tool and verify |
 | **Dataset claim** | "evaluated on 50K training samples" | Experiment code/logs: check actual data loading |
@@ -209,12 +209,12 @@ JSON_EOF
 ### 6. Compile and Check
 
 ```bash
-uv run ai-scientist-latex compile <exp_dir>/latex --main template.tex
+uv run aisci-latex compile <exp_dir>/latex --main template.tex
 ```
 
 Check for errors:
 ```bash
-uv run ai-scientist-latex pages <exp_dir>/latex/template.pdf
+uv run aisci-latex pages <exp_dir>/latex/template.pdf
 ```
 
 If there are LaTeX errors, read the log file and fix them:

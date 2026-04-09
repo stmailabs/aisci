@@ -6,7 +6,7 @@ description: Generate experiment code for a BFTS iteration. Produces Python code
 
 # Experiment Code Generation
 
-You generate Python experiment code for a single BFTS iteration. This skill produces code only — it does NOT execute it. Use `/ai-scientist:experiment-execute` to run the generated code.
+You generate Python experiment code for a single BFTS iteration. This skill produces code only — it does NOT execute it. Use `/aisci:experiment-execute` to run the generated code.
 
 ## Arguments
 
@@ -22,18 +22,18 @@ Same as experiment-step: `--exp-dir`, `--stage`, `--parent-id`, `--action`, `--t
 ### 1. Load Context
 
 ```bash
-uv run ai-scientist-state journal-summary <exp_dir> <stage>
+uv run aisci-state journal-summary <exp_dir> <stage>
 ```
 
 If parent node ID provided:
 ```bash
-uv run ai-scientist-state node-info <exp_dir> <stage> <parent_id> --show-code
+uv run aisci-state node-info <exp_dir> <stage> <parent_id> --show-code
 ```
 
 ### 2. Detect Device
 
 ```bash
-uv run ai-scientist-device --preamble
+uv run aisci-device --preamble
 ```
 
 ### 3. Generate Code
@@ -54,7 +54,7 @@ mkdir -p <exp_dir>/workspace/figures
 ### 5. Check for Duplicates
 
 ```bash
-uv run ai-scientist-state dedup-check <exp_dir> <stage> --code <exp_dir>/workspace/runfile.py
+uv run aisci-state dedup-check <exp_dir> <stage> --code <exp_dir>/workspace/runfile.py
 ```
 
 If duplicate found, report it and skip — no need to execute.

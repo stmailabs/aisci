@@ -12,14 +12,14 @@ Install Claude Code: `npm install -g @anthropic-ai/claude-code`
 The marketplace cache is stale. Force update:
 ```bash
 claude plugin marketplace update aisci
-claude plugin uninstall ai-scientist@aisci --scope project
-claude plugin install ai-scientist@aisci --scope project
+claude plugin uninstall aisci@aisci --scope project
+claude plugin install aisci@aisci --scope project
 ```
 
-### `ai-scientist-verify: command not found`
+### `aisci-verify: command not found`
 The CLI tools are in `.venv/bin/`. Always use `uv run`:
 ```bash
-uv run ai-scientist-verify
+uv run aisci-verify
 ```
 
 ## Experiments
@@ -33,9 +33,9 @@ Experiment code uses too much GPU memory.
 
 ### All Stage 1 Nodes Are Failing
 After 20 iterations, no working code.
-- Check the error patterns: `uv run ai-scientist-state journal-summary <exp_dir> stage1_initial`
+- Check the error patterns: `uv run aisci-state journal-summary <exp_dir> stage1_initial`
 - Common causes: missing dataset, wrong import, incompatible library versions
-- Provide seed code: `claude '/ai-scientist --idea idea.json --seed-code starter.py'`
+- Provide seed code: `claude '/aisci --idea idea.json --seed-code starter.py'`
 - Enable Octopus rescue: `octopus.rescue_on_stuck: true` in config
 
 ### Experiment Takes Too Long
@@ -53,7 +53,7 @@ The experiment code doesn't print metrics in the expected format.
 ### LaTeX Compilation Fails
 ```bash
 # Check if LaTeX is installed
-uv run ai-scientist-latex check
+uv run aisci-latex check
 
 # macOS — install BasicTeX + required packages
 brew install --cask basictex
@@ -101,13 +101,13 @@ The pipeline falls back to WebSearch if S2 is unavailable.
 - Set `OPENAI_API_KEY` for GPT-4o access
 - Set `GOOGLE_API_KEY` or `GEMINI_API_KEY` for Gemini access
 - Claude uses your existing Anthropic credentials automatically
-- Test with: `claude '/ai-scientist:octo-review --test'`
+- Test with: `claude '/aisci:octo-review --test'`
 
 ## Progress Monitoring
 
 Check experiment progress mid-run:
 ```bash
-uv run ai-scientist-dashboard <exp_dir>
-uv run ai-scientist-state status <exp_dir>
-uv run ai-scientist-state journal-summary <exp_dir> stage1_initial
+uv run aisci-dashboard <exp_dir>
+uv run aisci-state status <exp_dir>
+uv run aisci-state journal-summary <exp_dir> stage1_initial
 ```

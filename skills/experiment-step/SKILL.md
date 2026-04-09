@@ -11,8 +11,8 @@ You are an AI researcher executing a single iteration of the Best-First Tree Sea
 ## Note
 
 This skill can optionally be replaced by two sub-skills for better failure recovery:
-- `/ai-scientist:experiment-generate` — produces code (saved even if execution fails later)
-- `/ai-scientist:experiment-execute` — runs code, parses metrics, records node
+- `/aisci:experiment-generate` — produces code (saved even if execution fails later)
+- `/aisci:experiment-execute` — runs code, parses metrics, records node
 
 The split skills allow retrying execution without regenerating code. The monolithic flow below is used by default when the experiment skill launches this as a subagent.
 
@@ -38,18 +38,18 @@ Parse these from the user's message or arguments.
 
 Check the current journal state:
 ```bash
-uv run ai-scientist-state journal-summary <exp_dir> <stage>
+uv run aisci-state journal-summary <exp_dir> <stage>
 ```
 
 If a parent node ID is provided, read the parent node's details:
 ```bash
-uv run ai-scientist-state node-info <exp_dir> <stage> <parent_id> --show-code
+uv run aisci-state node-info <exp_dir> <stage> <parent_id> --show-code
 ```
 
 ### 2. Detect Device
 
 ```bash
-uv run ai-scientist-device --preamble
+uv run aisci-device --preamble
 ```
 
 ### 3. Generate Experiment Code
@@ -74,7 +74,7 @@ Based on the action type, generate a complete Python experiment script:
 #### For `improve` (enhance good parent):
 - Read the parent's metrics and analysis from node-info
 - If this is the **first node of a new stage** (parent from previous stage):
-  - Read the stage briefing: `ai-scientist-state stage-briefing <exp_dir> <previous_stage>`
+  - Read the stage briefing: `aisci-state stage-briefing <exp_dir> <previous_stage>`
   - Write fresh code informed by the briefing's findings and metrics
   - Do NOT copy the parent's code — the goals have changed
 - If this is a **within-stage improvement**:
@@ -122,7 +122,7 @@ mkdir -p <exp_dir>/workspace/figures
 
 **After writing, check for duplicates** before executing:
 ```bash
-uv run ai-scientist-state dedup-check <exp_dir> <stage> --code <exp_dir>/workspace/runfile.py
+uv run aisci-state dedup-check <exp_dir> <stage> --code <exp_dir>/workspace/runfile.py
 ```
 If `"duplicate": true`, skip execution and reuse the existing node's metrics. Report: "Skipped — identical code already executed (node <id>, metric: <value>)".
 
@@ -141,14 +141,14 @@ cd <exp_dir>/workspace && timeout 3600 uv run python3 runfile.py 2>&1 | tee <exp
 
 **If `compute.backend` is `modal`**: Run on Modal cloud GPU using the modal runner:
 ```bash
-uv run ai-scientist-modal-run <exp_dir>/workspace/runfile.py --gpu <compute.modal.gpu from config> --output-log <exp_dir>/logs/step_<N>_output.txt
+uv run aisci-modal-run <exp_dir>/workspace/runfile.py --gpu <compute.modal.gpu from config> --output-log <exp_dir>/logs/step_<N>_output.txt
 ```
 This uploads the code, executes on a Modal GPU container, and streams output back. If Modal execution fails (auth, quota, etc.), fall back to local execution and warn the user.
 
 ### 5. Parse Metrics
 
 ```bash
-uv run ai-scientist-metrics <exp_dir>/logs/step_<N>_output.txt --json
+uv run aisci-metrics <exp_dir>/logs/step_<N>_output.txt --json
 ```
 
 ### 6. Analyze Plots
@@ -165,7 +165,7 @@ If plots were generated in `<exp_dir>/workspace/figures/`:
 ### 8. Save Node to Journal
 
 ```bash
-uv run ai-scientist-state add-node <exp_dir> <stage> \
+uv run aisci-state add-node <exp_dir> <stage> \
     --plan "<brief plan description>" \
     --code <exp_dir>/workspace/runfile.py \
     --output-log <exp_dir>/logs/step_<N>_output.txt \

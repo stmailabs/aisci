@@ -31,7 +31,7 @@ If `OCTOPUS_MISSING`, report the error and stop:
 ### 1. Extract Paper Text
 
 ```bash
-uv run ai-scientist-pdf <pdf_path>
+uv run aisci-pdf <pdf_path>
 ```
 
 ### 2. Multi-Model Paper Review
@@ -61,10 +61,10 @@ The `/octo:debate` dispatches to multiple AI providers (Codex, Gemini, Claude, e
 
 Get the best experiment code:
 ```bash
-uv run ai-scientist-state save-best <exp_dir> stage4_ablation 2>/dev/null || \
-uv run ai-scientist-state save-best <exp_dir> stage3_creative 2>/dev/null || \
-uv run ai-scientist-state save-best <exp_dir> stage2_baseline 2>/dev/null || \
-uv run ai-scientist-state save-best <exp_dir> stage1_initial
+uv run aisci-state save-best <exp_dir> stage4_ablation 2>/dev/null || \
+uv run aisci-state save-best <exp_dir> stage3_creative 2>/dev/null || \
+uv run aisci-state save-best <exp_dir> stage2_baseline 2>/dev/null || \
+uv run aisci-state save-best <exp_dir> stage1_initial
 ```
 
 Then invoke alignment check:
