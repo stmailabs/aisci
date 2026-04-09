@@ -329,12 +329,12 @@ If `OCTOPUS_AVAILABLE`, enhance the review with a multi-model debate:
 
    Invoke the multi-model debate with paper context:
    ```
-   /octo:debate "Peer review this research paper. Evaluate: (1) experimental rigor and reproducibility, (2) conceptual soundness and novelty, (3) practical impact and clarity. Paper: <pdf_path>. Venue: <venue>. Code: <best_solution_dir> (verify code-methods alignment)."
+   /octo:debate "Peer review this research paper using ALL available AI providers. Each provider should independently evaluate as a reviewer for <venue>. Score: Originality (1-4), Quality (1-4), Clarity (1-4), Significance (1-4), Soundness (1-4), Overall (1-10). Provide strengths, weaknesses, and decision. Use the 75% consensus gate. Paper: <pdf_path>. Code: <best_solution_dir> (verify code-methods alignment — check hyperparameters, data leakage, undocumented steps)."
    ```
 
    If alignment is disabled or no code available, omit the code reference:
    ```
-   /octo:debate "Peer review this research paper. Evaluate: (1) experimental rigor and reproducibility, (2) conceptual soundness and novelty, (3) practical impact and clarity. Paper: <pdf_path>. Venue: <venue>."
+   /octo:debate "Peer review this research paper using ALL available AI providers. Each provider should independently evaluate as a reviewer for <venue>. Score: Originality (1-4), Quality (1-4), Clarity (1-4), Significance (1-4), Soundness (1-4), Overall (1-10). Provide strengths, weaknesses, and decision. Use the 75% consensus gate. Paper: <pdf_path>."
    ```
 
 3. **Save Octopus outputs** (Octopus returns rendered Markdown, not raw JSON):

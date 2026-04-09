@@ -39,7 +39,7 @@ uv run ai-scientist-pdf <pdf_path>
 Invoke `/octo:debate` with the paper text and review instructions:
 
 ```
-/octo:debate "Peer review this research paper for a top ML venue. Each reviewer should independently evaluate and provide:
+/octo:debate "Peer review this research paper using ALL available AI providers (Codex, Gemini, Claude, Perplexity, etc.). Each provider should independently evaluate for a top ML venue and provide:
 
 1. Summary (2-3 sentences)
 2. Strengths (specific, with evidence from the paper)

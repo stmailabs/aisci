@@ -57,6 +57,21 @@ uv run ai-scientist-search "<your proposed topic keywords>" --limit 10 --json
 
 If S2 returns no results, use the WebSearch tool to search `arxiv.org` for related papers.
 
+#### b2. Multi-Model Literature Synthesis (Optional — Octopus)
+
+**Skip if** `--no-octopus` is set, octopus not installed, or `octopus.enabled` is false.
+
+After the standard S2/WebSearch round, invoke `/octo:research` for multi-model synthesis:
+```
+/octo:research "Literature review for: <proposed topic keywords and hypothesis>. Find recent papers (2024-2026), identify gaps in the field, assess novelty of this proposed approach: <idea summary>. Each model should search independently and report findings."
+```
+This dispatches to multiple AI providers who independently research the topic. Merge their findings with the S2 results: deduplicate by title, combine insights, and use multi-model consensus to strengthen the novelty assessment.
+
+If `octopus.research_intensity` is `"deep"`, also run:
+```
+/octo:discover "Deep exploration of <topic>: map the research landscape, identify key groups, competing approaches, open problems, and potential blind spots in the proposed idea."
+```
+
 Analyze the results:
 - Are there papers that already address your proposed idea?
 - How does your idea differ from existing work?

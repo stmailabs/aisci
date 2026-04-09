@@ -181,7 +181,7 @@ For each extracted claim:
 If Octopus is available and `octopus.claim_verification` is true, delegate an independent verification pass for the Methods and Results sections:
 
 ```
-/octo:debate "Fact-check this paper section against the experiment code and logs. The paper claims: [paste section text]. The experiment code is at: <exp_dir>/state/<stage>/best_solution_*.py. The experiment logs are at: <exp_dir>/logs/. Check: (1) Do the reported metrics match actual metrics in the logs? (2) Does the methods description match the actual code? (3) Are hyperparameters accurately reported? Report any discrepancies."
+/octo:debate "Fact-check this paper section using ALL available AI providers. Each provider should independently verify claims against evidence. The paper claims: [paste section text]. The experiment code is at: <exp_dir>/state/<stage>/best_solution_*.py. The experiment logs are at: <exp_dir>/logs/. Check: (1) Do the reported metrics match actual metrics in the logs? (2) Does the methods description match the actual code? (3) Are hyperparameters accurately reported? Use the 75% consensus gate — flag claims where providers disagree."
 ```
 
 If Octopus flags discrepancies, fix them before compiling.
