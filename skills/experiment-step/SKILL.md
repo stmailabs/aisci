@@ -194,6 +194,15 @@ cat <exp_dir>/logs/step_<N>_output.txt | uv run aisci-classify classify
 ```
 This returns a JSON with `category` (e.g., CUDA_OOM, SHAPE_MISMATCH, IMPORT_ERROR) and a `recommendation`. Include the category in the node's analysis field.
 
+**Claude fallback for `UNKNOWN` category**: If the classifier returns category `UNKNOWN`, use Claude to classify in natural language:
+
+1. Read the last 100 lines of the execution log
+2. Analyze: what kind of error is this? (training divergence? suspicious metrics? silent failure? etc.)
+3. Assign a descriptive category (e.g., `METRIC_SUSPICIOUSLY_HIGH`, `NO_LEARNING_PROGRESS`, `DATASET_LOADING_STUCK`)
+4. Include both the category AND a 1-2 sentence description in the node's `analysis` field
+
+Regex classification handles common cases (CUDA_OOM, SHAPE_MISMATCH, etc.) fast. Claude fallback handles the 10% of nuanced errors regex misses.
+
 ### 8. Save Node to Journal
 
 ```bash

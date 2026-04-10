@@ -115,6 +115,20 @@ For each round:
 
 **Stop early** when all major claims are cited (typically 10-20 for a workshop paper, 20-35 for a full paper). Do not force all rounds if citations are sufficient.
 
+### 3b. Multi-Model Citation Verification (default when Octopus available)
+
+**Run by default** when Octopus is installed. Skip only if `--no-octopus` or `octopus.enabled: false`.
+
+Claude alone drives S2 queries from its own understanding — which means Claude's biases and hallucination tendencies carry forward. Multi-model verification catches fake/misattributed citations:
+
+```
+/octo:research "Verify these citations are real and accurate. For each, confirm: (1) the paper exists with this exact title and authors, (2) the venue and year are correct, (3) the paper's claim as cited is actually in the paper. Return a JSON list with each citation's verification status. Citations to verify: [paste references.bib entries]"
+```
+
+Use ALL available providers. Perplexity is particularly strong at real-time web verification. Remove any citations flagged as unverified or hallucinated.
+
+This is THE most critical step for paper credibility — reviewers will check citations.
+
 ### 4. View and Describe Figures (VLM Review)
 
 Use Claude's native vision capabilities to review each figure.
@@ -194,9 +208,13 @@ For each extracted claim:
    - **False** — contradicts ground truth → rewrite immediately
 3. **Fix before proceeding** — do not move to the next section with unresolved false or imprecise claims
 
-#### Octopus Cross-Check (Optional)
+#### Multi-Model Fact Verification (default when Octopus available)
 
-If Octopus is available and `octopus.claim_verification` is true, delegate an independent verification pass for the Methods and Results sections:
+**Run this by default** when Octopus is available. Only skip if `octopus.claim_verification: false` is explicitly set in config or `--no-octopus` flag is passed.
+
+**Rationale**: Fact verification is THE single most important quality gate for publishable papers. Claude-alone is insufficient because it has systematic bias (generous with its own work). Multi-model consensus catches hallucinations Claude misses.
+
+Delegate an independent verification pass for the Methods and Results sections:
 
 ```
 /octo:debate "Fact-check this paper section using ALL available AI providers. Each provider should independently verify claims against evidence. The paper claims: [paste section text]. The experiment code is at: <exp_dir>/state/<stage>/best_solution_*.py. The experiment logs are at: <exp_dir>/logs/. Check: (1) Do the reported metrics match actual metrics in the logs? (2) Does the methods description match the actual code? (3) Are hyperparameters accurately reported? Use the 75% consensus gate — flag claims where providers disagree."
@@ -215,7 +233,8 @@ cat > <exp_dir>/claim_verification.json << 'JSON_EOF'
   "fixed": <N>,
   "unverifiable": <N>,
   "false_caught": <N>,
-  "octopus_checked": true|false,
+  "octopus_checked": true,
+  "octopus_checked_note": "Default when Octopus is available — set to false only if --no-octopus or octopus.claim_verification: false was configured.",
   "sections_checked": ["abstract", "introduction", "method", "results", "discussion"],
   "issues_found": [
     {"section": "results", "claim": "...", "status": "fixed", "detail": "metric was 0.891, not 0.921"}

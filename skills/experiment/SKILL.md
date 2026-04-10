@@ -227,23 +227,20 @@ When a stage completes:
 
 **Why briefings instead of code?** Each stage has fundamentally different goals. Stage 2 changes hyperparameters, Stage 3 changes architecture, Stage 4 adds ablation logic. Passing code forces the agent to work around existing structure. Passing conclusions lets it write clean code for the new goal.
 
-#### e. Code Review (Optional)
+#### e. Stage-Gate Code Review (Octopus primary, code-review fallback)
 
-**Skip if** the code-review plugin is not installed.
+When a stage completes, run code review on the best node before transitioning.
 
-Before the Octopus stage-gate review, run a general code review on the best node's code using `/code-review`. This catches code quality issues (dead code, unused variables, readability) that complement Octopus's ML-specific review. Save the best solution first, then review:
-```bash
-uv run aisci-state save-best <exp_dir> <current_stage>
+**Never run both Octopus review and `/code-review`** — they overlap significantly and waste tokens. Octopus already includes code-focused providers that subsume most of what `/code-review` catches. Pick one based on availability.
+
+**Primary: Octopus multi-model review** (default when `octopus.enabled` is not `"false"` and the plugin is installed):
 ```
-Then invoke `/code-review` on the saved file. Apply any quick fixes before proceeding.
+/octo:review <exp_dir>/state/<current_stage>/best_solution_*.py
+```
+This dispatches to multiple providers for adversarial code review. Catches ML-specific issues (data leakage, incorrect metrics, device handling, numerical instability) as well as general code quality.
 
-#### f. Stage-Gate Code Review (Optional — Octopus)
-
-**Skip if** any of these conditions are true:
-- The global `octopus.enabled` config value is `"false"`
-- The `--no-octopus` flag was passed to the orchestrator
-- `octopus.stage_gate_review` is `false` in config
-- The claude-octopus plugin is not installed
+**Fallback: `/code-review` plugin** (only if Octopus is unavailable):
+If the claude-octopus plugin is not installed, or `octopus.enabled` is `"false"`, or `--no-octopus` was passed, use the general `/code-review` plugin for code quality review. This is less thorough for ML issues but catches basic code quality problems.
 
 **Run this BEFORE the stage transition** (step d), not after — because `transition` updates `current_stage` to the next stage. Review the just-completed stage's best code.
 
@@ -294,7 +291,7 @@ This step typically adds 1-3 minutes per stage transition but can prevent wasted
 - The global `octopus.enabled` config value is `"false"`
 - The `--no-octopus` flag was passed to the orchestrator
 - `octopus.rescue_on_stuck` is `false` in config
-- The claude-octopus plugin is not installed (check same as stage-gate step f.1)
+- The claude-octopus plugin is not installed (check same as stage-gate step e.1)
 
 **Auto-rescue trigger**: After every iteration batch (not just at 80%), run error pattern analysis. Rescue if **≥50% of nodes have the same error type** AND at least 3 buggy nodes exist. This catches patterns early instead of waiting for the pipeline to waste 80% of iterations.
 

@@ -50,6 +50,8 @@ These show what good reviews look like — use them as a reference for depth and
 
 ### 3. Review the Paper Text
 
+> **NOTE**: This step is DEPRECATED in favor of the Claude panel (step 10). A single Claude review is redundant with the 4-persona panel — the panel's Empiricist persona covers essentially the same ground. Skip this step entirely if the panel is being run — it's kept only for backward compatibility with scripts that expect `review.json`. If you must run it, understand you're duplicating work. Downstream tools should read `review.json` from the panel synthesis (step 10) instead.
+
 Adopt the following reviewer persona:
 
 > You are an AI researcher reviewing a paper submitted to a prestigious ML venue. Be critical and cautious in your decision. If a paper is bad or you are unsure, give it bad scores and reject it.
@@ -84,6 +86,16 @@ Read the PDF file to view its pages as images. For each figure in the paper:
 5. **Overall Assessment**: Should this figure be in the main paper, moved to appendix, or removed?
 6. **Sub-figures**: Are there too many sub-figures? Is the layout effective?
 7. **Informativeness**: Does the figure effectively communicate the data?
+
+### 4b. Multi-Model Figure Review (when Octopus available)
+
+After Claude's figure-by-figure VLM review, also run Octopus multi-vision review for the **final paper submission only** (skip during BFTS iterations where Claude-alone is sufficient for speed):
+
+```
+/octo:debate "Review these paper figures. For each figure, assess: (1) publication quality (axes, labels, legends, resolution), (2) caption accuracy (does caption match what figure shows?), (3) scientific clarity (does the figure support the paper's claims?). Use ALL available vision-capable providers (Claude and Gemini minimum). Report per-figure scores 0-10 and any issues. Figures: [paste figure paths]"
+```
+
+Gemini is a strong vision model and catches different issues than Claude. For publication-quality submission, two vision models are better than one. For draft/iteration phases, Claude-alone is sufficient (speed > consensus).
 
 ### 5. Generate Structured Review
 
@@ -297,6 +309,34 @@ cat > <output_dir>/claude_panel_synthesis.json << 'JSON_EOF'
 JSON_EOF
 ```
 
+**Also write `review.json` from the panel synthesis** so downstream tools (which expect the step-5 format) don't break when the deprecated single review is skipped:
+
+```bash
+cat > <output_dir>/review.json << 'JSON_EOF'
+{
+  "Summary": "Synthesized from the 4-persona Claude panel (Empiricist, Theorist, Practitioner, Skeptic).",
+  "Strengths": ["<consensus strengths from panel synthesis>"],
+  "Weaknesses": ["<consensus weaknesses from panel synthesis>"],
+  "Originality": <aggregated>,
+  "Quality": <aggregated>,
+  "Clarity": <aggregated>,
+  "Significance": <aggregated>,
+  "Questions": ["..."],
+  "Limitations": ["..."],
+  "Ethical Concerns": false,
+  "Soundness": <aggregated>,
+  "Presentation": <aggregated>,
+  "Contribution": <aggregated>,
+  "Overall": <aggregated>,
+  "Confidence": <aggregated>,
+  "Decision": "Accept or Reject",
+  "source": "claude_panel_synthesis"
+}
+JSON_EOF
+```
+
+This keeps the `review.json` contract stable while letting the deprecated single-reviewer path be skipped.
+
 ### 11. Multi-Model Review (Optional — Octopus)
 
 **Skip this step if** Octopus is not available, the user specified `--no-octopus`, or `octopus.enabled` is `"false"` in config.
@@ -357,25 +397,36 @@ If `OCTOPUS_AVAILABLE`, enhance the review with a multi-model debate:
 
 If Octopus is not available, skip silently — the Claude reviews are complete on their own.
 
-### 12. Cross-Review Comparison
+### 12. Final Synthesis (Octopus when available)
 
-Compare the 3 review layers and produce a final summary:
+We've now gathered 4 independent review layers:
+- Claude panel (4 personas: Empiricist, Theorist, Practitioner, Skeptic)
+- Scientific critical thinking assessment (optional)
+- Octopus multi-model debate (optional, from step 11)
 
-1. **Claude single review** (step 5) — baseline assessment
-2. **Claude panel** (step 10) — multi-perspective consensus
-3. **Octopus multi-model** (step 11) — independent external review + code alignment
+**Aggregating these through a single Claude call reintroduces the bias we just eliminated with multi-model review.** Use Octopus for the synthesis itself:
 
-For each score dimension, show all 3 ratings side-by-side. Flag any dimension where reviews diverge by >2 points — these are areas of genuine uncertainty.
+**If Octopus available**:
+```
+/octo:debate "Synthesize these independent paper reviews into a final recommendation. Reviews to synthesize: [paste all panel JSONs + octopus review]. Identify: (1) consensus strengths (agreed by 75%+ reviewers), (2) consensus weaknesses, (3) genuine disagreements (where reviewers diverge >2 points), (4) aggregated scores, (5) final accept/reject recommendation with confidence level. Use the 75% consensus gate — flag anything where providers genuinely disagree."
+```
 
-Save the comparison:
+**If Octopus unavailable** (fallback): use Claude alone to aggregate, but note in the output that this is a single-model aggregation.
+
+Save the synthesis to `<output_dir>/final_synthesis.json`:
+
 ```bash
-cat > <output_dir>/review_comparison.json << 'JSON_EOF'
+cat > <output_dir>/final_synthesis.json << 'JSON_EOF'
 {
-  "claude_single": { "Overall": <N>, "Decision": "..." },
   "claude_panel": { "Overall": <N>, "Decision": "..." },
   "octopus_panel": { "Overall": <N>, "Decision": "..." },
+  "consensus_strengths": ["..."],
+  "consensus_weaknesses": ["..."],
+  "genuine_disagreements": ["..."],
+  "aggregated_scores": { "Overall": <N> },
   "consensus_decision": "Accept or Reject",
-  "high_divergence_areas": ["..."],
+  "confidence": "high|medium|low",
+  "synthesized_by": "octopus|claude-alone",
   "final_recommendation": "..."
 }
 JSON_EOF
