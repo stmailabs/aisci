@@ -176,14 +176,36 @@ Repeat until stage completion (max_iters reached or completion criteria met):
 
    **HALT condition — explicit check required before proceeding past step b**:
 
+   Parse journal-summary once, extract max_iters from config, then compare:
    ```bash
-   good_count=$(uv run aisci-state journal-summary <exp_dir> <stage> | python3 -c "import json,sys; print(json.load(sys.stdin).get('good_nodes', 0))")
-   iters_done=$(uv run aisci-state journal-summary <exp_dir> <stage> | python3 -c "import json,sys; print(json.load(sys.stdin).get('total_nodes', 0))")
+   # Extract good_count, total_nodes, and max_iters in one pass
+   eval $(uv run aisci-state journal-summary <exp_dir> <stage> | python3 -c "
+   import json, sys
+   d = json.load(sys.stdin)
+   print(f\"good_count={d.get('good_nodes', 0)}\")
+   print(f\"iters_done={d.get('total_nodes', 0)}\")
+   ")
+   # max_iters comes from config.yaml: agent.stages.stage<N>_max_iters
+   max_iters=$(uv run aisci-config --config config.yaml 2>/dev/null | python3 -c "
+   import yaml, sys
+   cfg = yaml.safe_load(sys.stdin)
+   stage_key = '<stage>'.replace('_initial', '1_max_iters').replace('_baseline', '2_max_iters').replace('_creative', '3_max_iters').replace('_ablation', '4_max_iters')
+   stage_key = 'stage' + stage_key.split('stage')[-1] if 'stage' in stage_key else stage_key
+   print(cfg.get('agent', {}).get('stages', {}).get(stage_key, 20))
+   ")
    if [ "$good_count" -eq 0 ] && [ "$iters_done" -ge "$max_iters" ]; then
-       echo "HALT: Stage <stage> reached max_iters with zero good nodes"
+       echo "HALT: Stage <stage> reached max_iters ($max_iters) with zero good nodes"
        uv run aisci-state error-analysis <exp_dir> <stage>
        exit 1
    fi
+   ```
+
+   Simpler alternative — just check "all iterations exhausted with nothing good":
+   ```bash
+   summary=$(uv run aisci-state journal-summary <exp_dir> <stage>)
+   good_count=$(echo "$summary" | python3 -c "import json,sys; print(json.load(sys.stdin).get('good_nodes', 0))")
+   # If you already know max_iters from the stage-goals context (they're in STAGE_GOALS dict), use that value directly:
+   # Stage 1: 20, Stage 2: 12, Stage 3: 12, Stage 4: 18
    ```
 
    If this check triggers, **do NOT proceed** to multi-seed evaluation (step c) or stage transition (step d). Report the error analysis and stop the pipeline. The user must diagnose the root cause (typically via the dominant_error field from error-analysis) before resuming.
@@ -246,31 +268,28 @@ When a stage completes:
 
 When a stage completes, run code review on the best node before transitioning.
 
-**PREREQUISITE: Best solution file must exist** — enforce explicitly with exit codes:
+**The ENTIRE section e is wrapped in a conditional**: if save-best fails (no good nodes to review), skip all of e and jump straight to step f.
 
 ```bash
-if ! uv run aisci-state save-best <exp_dir> <current_stage> 2>/dev/null; then
-    echo "WARNING: No good nodes to review in <current_stage>, skipping stage-gate review"
-    # Proceed directly to stage transition (step d), skipping e entirely
-else
-    # save-best succeeded, proceed with review below
+# Gate the entire stage-gate review section on save-best success
+if uv run aisci-state save-best <exp_dir> <current_stage> 2>/dev/null; then
     BEST_FILE=$(ls "<exp_dir>/state/<current_stage>"/best_solution_*.py 2>/dev/null | head -1)
+    # Proceed with review steps below (Octopus primary, code-review fallback)
+    SHOULD_REVIEW=1
+else
+    echo "WARNING: No good nodes to review in <current_stage>, skipping stage-gate review"
+    SHOULD_REVIEW=0
+    # Jump to step f (stage transition) — do not run any /octo:review or /code-review
 fi
 ```
 
-If the `if` branch fires, **skip the rest of this section entirely** and continue to step f (the stage transition or rescue step). Do not attempt `/octo:review` or `/code-review` — there is no file to review. This is a normal condition (not an error) when every attempt in this stage failed; the HALT check above should have caught stage 1, but later stages may have partial failures.
+**Only run the following review steps if `SHOULD_REVIEW=1`**. If `SHOULD_REVIEW=0`, continue directly to step f.
 
 **Never run both Octopus review and `/code-review`** — they overlap significantly and waste tokens. Octopus already includes code-focused providers that subsume most of what `/code-review` catches. Pick one based on availability.
 
 **Primary: Octopus multi-model review** (default when `octopus.enabled` is not `"false"` and the plugin is installed):
 
-First, resolve the actual best_solution file path (the glob is NOT expanded inside quoted octopus prompts):
-```bash
-BEST_FILE=$(ls "<exp_dir>/state/<current_stage>"/best_solution_*.py 2>/dev/null | head -1)
-[ -z "$BEST_FILE" ] && { echo "SKIP: no best_solution file to review"; exit 0; }
-```
-
-Then pass the resolved path (now literal, safe to quote for spaces):
+BEST_FILE is already resolved in the gate above. Pass it as a literal (safe to quote for spaces):
 ```
 /octo:review "$BEST_FILE"
 ```
