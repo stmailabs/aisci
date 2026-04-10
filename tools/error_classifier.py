@@ -229,7 +229,7 @@ def analyze_journal(journal: dict) -> dict:
             buggy += 1
             category = classify_node(node)
             error_counts[category] += 1
-            nodes_by_error.setdefault(category, []).append(node["id"])
+            nodes_by_error.setdefault(category, []).append(node.get("id", "unknown"))
         else:
             good += 1
 

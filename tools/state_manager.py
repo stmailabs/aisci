@@ -12,7 +12,7 @@ import sys
 import time
 import uuid
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
@@ -701,7 +701,7 @@ def save_checkpoint(exp_dir: str, stage: str, node_id: str, step: str, data: Any
         path.write_text(json.dumps(data, indent=2))
     elif step == "done":
         path = d / "done.marker"
-        path.write_text(datetime.utcnow().isoformat())
+        path.write_text(datetime.now(timezone.utc).isoformat())
     else:
         raise ValueError(f"Unknown checkpoint step: {step}")
     return str(path)
@@ -1210,7 +1210,14 @@ examples:
         else:
             data = sys.stdin.read()
         if args.step == "metrics" or args.step == "plots":
-            data = json.loads(data) if data.strip() else {}
+            if not data.strip():
+                data = {}
+            else:
+                try:
+                    data = json.loads(data)
+                except json.JSONDecodeError as e:
+                    print(json.dumps({"error": f"Invalid JSON for {args.step}: {e}"}))
+                    sys.exit(1)
         path = save_checkpoint(args.exp_dir, args.stage, args.node_id, args.step, data)
         print(json.dumps({"saved": path}))
 
