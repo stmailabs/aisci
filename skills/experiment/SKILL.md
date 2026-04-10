@@ -174,7 +174,19 @@ Repeat until stage completion (max_iters reached or completion criteria met):
    **Stage 3 completion**: Execution time scaling properly (>50% of timeout); tested on 3 datasets.
    **Stage 4 completion**: Max iterations reached (always run to completion).
 
-   **HALT condition**: If `max_iters` is reached and `good_nodes == 0` for any stage, the pipeline MUST halt with an error. Do not proceed to multi-seed evaluation or stage transition — there is no code to promote. Report the error analysis (via `uv run aisci-state error-analysis <exp_dir> <stage>`) and suggest the user fix the root cause before resuming.
+   **HALT condition — explicit check required before proceeding past step b**:
+
+   ```bash
+   good_count=$(uv run aisci-state journal-summary <exp_dir> <stage> | python3 -c "import json,sys; print(json.load(sys.stdin).get('good_nodes', 0))")
+   iters_done=$(uv run aisci-state journal-summary <exp_dir> <stage> | python3 -c "import json,sys; print(json.load(sys.stdin).get('total_nodes', 0))")
+   if [ "$good_count" -eq 0 ] && [ "$iters_done" -ge "$max_iters" ]; then
+       echo "HALT: Stage <stage> reached max_iters with zero good nodes"
+       uv run aisci-state error-analysis <exp_dir> <stage>
+       exit 1
+   fi
+   ```
+
+   If this check triggers, **do NOT proceed** to multi-seed evaluation (step c) or stage transition (step d). Report the error analysis and stop the pipeline. The user must diagnose the root cause (typically via the dominant_error field from error-analysis) before resuming.
 
 #### c. Multi-Seed Evaluation (parallel)
 
@@ -234,15 +246,36 @@ When a stage completes:
 
 When a stage completes, run code review on the best node before transitioning.
 
-**PREREQUISITE: Best solution file must exist.** Run `uv run aisci-state save-best <exp_dir> <stage>` first. If it prints "No good nodes to save" or exits with an error, SKIP this entire section (there's nothing to review) and log a warning. This is a normal state for stages that completed with all-buggy nodes (which should have already halted the pipeline — see HALT condition above).
+**PREREQUISITE: Best solution file must exist** — enforce explicitly with exit codes:
+
+```bash
+if ! uv run aisci-state save-best <exp_dir> <current_stage> 2>/dev/null; then
+    echo "WARNING: No good nodes to review in <current_stage>, skipping stage-gate review"
+    # Proceed directly to stage transition (step d), skipping e entirely
+else
+    # save-best succeeded, proceed with review below
+    BEST_FILE=$(ls "<exp_dir>/state/<current_stage>"/best_solution_*.py 2>/dev/null | head -1)
+fi
+```
+
+If the `if` branch fires, **skip the rest of this section entirely** and continue to step f (the stage transition or rescue step). Do not attempt `/octo:review` or `/code-review` — there is no file to review. This is a normal condition (not an error) when every attempt in this stage failed; the HALT check above should have caught stage 1, but later stages may have partial failures.
 
 **Never run both Octopus review and `/code-review`** — they overlap significantly and waste tokens. Octopus already includes code-focused providers that subsume most of what `/code-review` catches. Pick one based on availability.
 
 **Primary: Octopus multi-model review** (default when `octopus.enabled` is not `"false"` and the plugin is installed):
+
+First, resolve the actual best_solution file path (the glob is NOT expanded inside quoted octopus prompts):
+```bash
+BEST_FILE=$(ls "<exp_dir>/state/<current_stage>"/best_solution_*.py 2>/dev/null | head -1)
+[ -z "$BEST_FILE" ] && { echo "SKIP: no best_solution file to review"; exit 0; }
 ```
-/octo:review "<exp_dir>/state/<current_stage>/best_solution_*.py"
+
+Then pass the resolved path (now literal, safe to quote for spaces):
 ```
-This dispatches to multiple providers for adversarial code review. Catches ML-specific issues (data leakage, incorrect metrics, device handling, numerical instability) as well as general code quality. Quote the path in case `<exp_dir>` contains spaces.
+/octo:review "$BEST_FILE"
+```
+
+This dispatches to multiple providers for adversarial code review. Catches ML-specific issues (data leakage, incorrect metrics, device handling, numerical instability) as well as general code quality.
 
 **Fallback: `/code-review` plugin** (only if Octopus is unavailable):
 If the claude-octopus plugin is not installed, or `octopus.enabled` is `"false"`, or `--no-octopus` was passed, use the general `/code-review` plugin for code quality review. This is less thorough for ML issues but catches basic code quality problems.
