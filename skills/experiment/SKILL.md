@@ -176,23 +176,27 @@ Repeat until stage completion (max_iters reached or completion criteria met):
 
    **HALT condition — explicit check required before proceeding past step b**:
 
-   Parse journal-summary once, extract max_iters from config, then compare:
+   Parse journal-summary once, look up `<stage>` → `stageN_max_iters` directly, then compare:
    ```bash
-   # Extract good_count, total_nodes, and max_iters in one pass
+   # Extract good_count and total_nodes in one pass
    eval $(uv run aisci-state journal-summary <exp_dir> <stage> | python3 -c "
    import json, sys
    d = json.load(sys.stdin)
    print(f\"good_count={d.get('good_nodes', 0)}\")
    print(f\"iters_done={d.get('total_nodes', 0)}\")
    ")
-   # max_iters comes from config.yaml: agent.stages.stage<N>_max_iters
-   max_iters=$(uv run aisci-config --config config.yaml 2>/dev/null | python3 -c "
-   import yaml, sys
-   cfg = yaml.safe_load(sys.stdin)
-   stage_key = '<stage>'.replace('_initial', '1_max_iters').replace('_baseline', '2_max_iters').replace('_creative', '3_max_iters').replace('_ablation', '4_max_iters')
-   stage_key = 'stage' + stage_key.split('stage')[-1] if 'stage' in stage_key else stage_key
+
+   # Extract max_iters for this stage from config.yaml.
+   # Stage name format: stage1_initial → stage1_max_iters, stage2_baseline → stage2_max_iters, etc.
+   max_iters=$(uv run python3 -c "
+   import yaml
+   cfg = yaml.safe_load(open('config.yaml'))
+   # Pull the stage number prefix (e.g., 'stage1') from '<stage>' like 'stage1_initial'
+   stage_prefix = '<stage>'.split('_')[0]  # 'stage1', 'stage2', 'stage3', 'stage4'
+   stage_key = f'{stage_prefix}_max_iters'  # 'stage1_max_iters'
    print(cfg.get('agent', {}).get('stages', {}).get(stage_key, 20))
    ")
+
    if [ "$good_count" -eq 0 ] && [ "$iters_done" -ge "$max_iters" ]; then
        echo "HALT: Stage <stage> reached max_iters ($max_iters) with zero good nodes"
        uv run aisci-state error-analysis <exp_dir> <stage>
@@ -200,7 +204,9 @@ Repeat until stage completion (max_iters reached or completion criteria met):
    fi
    ```
 
-   Simpler alternative — just check "all iterations exhausted with nothing good":
+   **max_iters values come from config.yaml** under `agent.stages.*`: `stage1_max_iters: 20`, `stage2_max_iters: 12`, `stage3_max_iters: 12`, `stage4_max_iters: 18` (defaults). Never assume they're in `STAGE_GOALS` — that dict only has stage names and descriptions.
+
+   Simpler alternative if you just want the good_count check:
    ```bash
    summary=$(uv run aisci-state journal-summary <exp_dir> <stage>)
    good_count=$(echo "$summary" | python3 -c "import json,sys; print(json.load(sys.stdin).get('good_nodes', 0))")
@@ -224,11 +230,12 @@ uv run aisci-multi-seed <exp_dir>/workspace/runfile.py \
 
 This runs all seeds concurrently with GPU queue management. Each seed gets its own GPU (CUDA_VISIBLE_DEVICES set automatically). On Apple Silicon (MPS), seeds run sequentially but still use the aggregator.
 
-After aggregation, mark the multi-seed result as a seed-agg node:
+After aggregation, mark the multi-seed result as a seed-agg node. Resolve the glob first — `add-node --code` expects a literal file path, not a pattern:
 ```bash
+BEST_FILE=$(ls "<exp_dir>/state/<stage>"/best_solution_*.py 2>/dev/null | head -1)
 uv run aisci-state add-node <exp_dir> <stage> \
     --plan "Multi-seed validation of best node" \
-    --code <exp_dir>/state/<stage>/best_solution_*.py \
+    --code "$BEST_FILE" \
     --metric "@<exp_dir>/state/<stage>/seed_aggregate.json" \
     --is-seed-agg-node \
     --datasets <datasets>
@@ -283,39 +290,27 @@ else
 fi
 ```
 
-**Only run the following review steps if `SHOULD_REVIEW=1`**. If `SHOULD_REVIEW=0`, continue directly to step f.
-
-**Never run both Octopus review and `/code-review`** — they overlap significantly and waste tokens. Octopus already includes code-focused providers that subsume most of what `/code-review` catches. Pick one based on availability.
-
-**Primary: Octopus multi-model review** (default when `octopus.enabled` is not `"false"` and the plugin is installed):
-
-BEST_FILE is already resolved in the gate above. Pass it as a literal (safe to quote for spaces):
-```
-/octo:review "$BEST_FILE"
-```
-
-This dispatches to multiple providers for adversarial code review. Catches ML-specific issues (data leakage, incorrect metrics, device handling, numerical instability) as well as general code quality.
-
-**Fallback: `/code-review` plugin** (only if Octopus is unavailable):
-If the claude-octopus plugin is not installed, or `octopus.enabled` is `"false"`, or `--no-octopus` was passed, use the general `/code-review` plugin for code quality review. This is less thorough for ML issues but catches basic code quality problems.
+**IF `SHOULD_REVIEW=0`, STOP HERE**. Do not run any review commands. Jump directly to step f (stage transition or rescue). The following steps only apply when `SHOULD_REVIEW=1` — save-best succeeded and BEST_FILE is set.
 
 **Run this BEFORE the stage transition** (step d), not after — because `transition` updates `current_stage` to the next stage. Review the just-completed stage's best code.
+
+**Never run both Octopus review and `/code-review`** — they overlap significantly and waste tokens. Octopus already includes code-focused providers that subsume most of what `/code-review` catches. Pick one based on availability.
 
 1. **Check Octopus availability** (respect global config and plugin presence):
    ```bash
    claude plugin list --json 2>/dev/null | python3 -c "import json,sys;any('octo' in p['id'] for p in json.load(sys.stdin)) and print('OCTOPUS_OK') or print('OCTOPUS_MISSING')" 2>/dev/null
    ```
-   The plugin must be present. Also check the loaded config's `octopus.enabled` value. If it is `"false"`, or `--no-octopus` was passed, skip this step.
+   The plugin must be present. Also check the loaded config's `octopus.enabled` value. If it is `"false"`, or `--no-octopus` was passed, use the `/code-review` fallback below.
 
-2. **If available**, get the promoted best solution from the just-completed stage:
-   ```bash
-   uv run aisci-state save-best <exp_dir> <completed_stage>
+2. **Primary path — Octopus multi-model review** (when OCTOPUS_OK):
+   `BEST_FILE` was already resolved by the `SHOULD_REVIEW` gate above. Pass it as a literal path (safe to quote for spaces):
    ```
-   Where `<completed_stage>` is the stage that just finished (e.g., `stage1_initial`), NOT the next stage.
-   This writes the best node's code to `<exp_dir>/state/<current_stage>/best_solution_<id>.py`. Use that file path for the review:
+   /octo:review "$BEST_FILE"
    ```
-   /octo:review "<exp_dir>/state/<current_stage>/best_solution_<id>.py"
-   ```
+   This dispatches to multiple providers for adversarial code review. Catches ML-specific issues (data leakage, incorrect metrics, device handling, numerical instability) as well as general code quality.
+
+   **Fallback — `/code-review` plugin** (only if OCTOPUS_MISSING or `--no-octopus`):
+   Use the general `/code-review` plugin for code quality review on `$BEST_FILE`. Less thorough for ML issues but catches basic code quality problems.
 
 3. **Parse the review output**. Octopus review returns prose (Markdown), not structured JSON. Read the output and identify any critical issues mentioned (data leakage, incorrect metrics, statistical errors, device bugs).
 
@@ -371,12 +366,12 @@ This returns JSON with:
    ```
    Note the total nodes, buggy count, and error classification.
 
-   Then get error details from recent buggy nodes. Read the stage journal to find node IDs:
+   Then get error details from recent buggy nodes. Read the stage journal to find node IDs. Substitute `<current_stage>` for the stage that is currently stuck (NOT always stage1_initial — stages 2-4 can also get stuck):
    ```bash
    uv run python3 -c "
    import json
    from tools.state_manager import load_journal, get_buggy_nodes
-   j = load_journal('<exp_dir>', 'stage1_initial')
+   j = load_journal('<exp_dir>', '<current_stage>')
    buggy = get_buggy_nodes(j)[-3:]  # last 3 buggy nodes
    for n in buggy:
        print(f'Node {n[\"id\"]}: exc_type={n.get(\"exc_type\",\"?\")} exc_info={str(n.get(\"exc_info\",\"\"))[:200]}')
