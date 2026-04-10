@@ -991,6 +991,19 @@ def get_nodes_for_expansion_smart(
         if leaves:
             candidates.append(leaves[-1])
 
+    # Final fallback: if the journal is empty (no nodes at all), return a
+    # single "draft" placeholder so callers know to generate a fresh root.
+    # This prevents infinite loops or crashes in the experiment skill.
+    if not candidates:
+        candidates.append({
+            "id": None,
+            "parent_id": None,
+            "is_buggy": False,
+            "stage": None,
+            "_action_hint": "draft",
+            "_note": "empty journal — caller should generate a fresh root node",
+        })
+
     return candidates
 
 

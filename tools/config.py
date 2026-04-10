@@ -160,9 +160,49 @@ try:
     from tools import TEMPLATES_DIR
 except ImportError:
     TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
-# Check project-local config first, fall back to template
-_PROJECT_CONFIG = Path("config.yaml")
-DEFAULT_CONFIG_PATH = _PROJECT_CONFIG if _PROJECT_CONFIG.exists() else TEMPLATES_DIR / "bfts_config.yaml"
+
+
+def _find_project_config() -> Optional[Path]:
+    """Walk up from CWD looking for config.yaml. Stops at filesystem root or home.
+
+    Returns the first config.yaml found, or None.
+    """
+    cwd = Path.cwd().resolve()
+    home = Path.home().resolve()
+    root = Path(cwd.root)
+    current = cwd
+    # Walk up at most 10 levels to avoid pathological cases
+    for _ in range(10):
+        candidate = current / "config.yaml"
+        if candidate.exists():
+            return candidate
+        if current == root or current == home:
+            break
+        parent = current.parent
+        if parent == current:  # reached top
+            break
+        current = parent
+    return None
+
+
+def _default_config_path() -> Path:
+    """Resolve the config path at call time, not module import time.
+
+    This ensures `uv run` from a project subdirectory still finds the
+    project's config.yaml via walk-up search.
+    """
+    project_cfg = _find_project_config()
+    if project_cfg is not None:
+        return project_cfg
+    return TEMPLATES_DIR / "bfts_config.yaml"
+
+
+# Kept for backward compat — computed lazily via module __getattr__ so callers
+# that reference `DEFAULT_CONFIG_PATH` at use time get the correct value.
+def __getattr__(name):
+    if name == "DEFAULT_CONFIG_PATH":
+        return _default_config_path()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 # ── Loading / merging ────────────────────────────────────────────────────────
@@ -218,7 +258,7 @@ def load_config(path: Optional[str] = None, overrides: Optional[dict] = None) ->
         Key-value pairs that override loaded values (flat or nested).
     """
     cfg_dict: dict = {}
-    config_path = Path(path) if path else DEFAULT_CONFIG_PATH
+    config_path = Path(path) if path else _default_config_path()
 
     if config_path.exists():
         with open(config_path) as f:
@@ -326,7 +366,7 @@ def main():
     print(output)
 
     if args.save and args.set:
-        save_path = Path(args.config) if args.config else DEFAULT_CONFIG_PATH
+        save_path = Path(args.config) if args.config else _default_config_path()
         save_config(cfg, str(save_path))
         print(f"Saved to {save_path}", file=sys.stderr)
 

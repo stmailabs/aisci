@@ -18,18 +18,21 @@ def extract_text(pdf_path: str, max_pages: Optional[int] = None) -> str:
     if not path.exists():
         raise FileNotFoundError(f"PDF not found: {pdf_path}")
 
+    errors = []
+
     # Try pymupdf4llm (Markdown-formatted output)
     try:
         import pymupdf4llm
 
         text = pymupdf4llm.to_markdown(str(path))
         if max_pages:
-            # Rough page splitting by form feed or page markers
             pages = _split_pages(text)
             text = "\n\n".join(pages[:max_pages])
         return text
     except ImportError:
         pass
+    except Exception as e:
+        errors.append(f"pymupdf4llm: {type(e).__name__}: {e}")
 
     # Fall back to PyMuPDF plain text
     try:
@@ -44,6 +47,8 @@ def extract_text(pdf_path: str, max_pages: Optional[int] = None) -> str:
         return "\n\n".join(texts)
     except ImportError:
         pass
+    except Exception as e:
+        errors.append(f"pymupdf: {type(e).__name__}: {e}")
 
     # Last resort: pypdf
     try:
@@ -58,9 +63,17 @@ def extract_text(pdf_path: str, max_pages: Optional[int] = None) -> str:
                 texts.append(text)
         return "\n\n".join(texts)
     except ImportError:
-        raise ImportError(
-            "No PDF library found. Install one of: pymupdf4llm, PyMuPDF, pypdf"
-        )
+        if not errors:
+            raise ImportError(
+                "No PDF library found. Install one of: pymupdf4llm, PyMuPDF, pypdf"
+            )
+    except Exception as e:
+        errors.append(f"pypdf: {type(e).__name__}: {e}")
+
+    # All backends failed — raise a clear error
+    raise RuntimeError(
+        f"All PDF extraction backends failed for {path}:\n  " + "\n  ".join(errors)
+    )
 
 
 def extract_sections(pdf_path: str) -> Dict[str, str]:
