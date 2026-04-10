@@ -117,7 +117,15 @@ For each round:
 
 ### 3b. Multi-Model Citation Verification (default when Octopus available)
 
-**Run by default** when Octopus is installed. Skip only if `--no-octopus` or `octopus.enabled: false`.
+**First, check Octopus availability**:
+```bash
+claude plugin list --json 2>/dev/null | python3 -c "import json,sys;any('octo' in p['id'] for p in json.load(sys.stdin)) and print('OCTOPUS_OK') or print('OCTOPUS_MISSING')" 2>/dev/null
+```
+
+**Run this step by default** if: `OCTOPUS_OK` AND `--no-octopus` not passed AND `octopus.enabled` is not `"false"` in config.
+**Skip** if any of those conditions fail. In that case, rely on the S2/WebSearch verification from step 3 (less rigorous but still functional).
+
+If running:
 
 Claude alone drives S2 queries from its own understanding — which means Claude's biases and hallucination tendencies carry forward. Multi-model verification catches fake/misattributed citations:
 

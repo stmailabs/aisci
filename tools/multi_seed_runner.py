@@ -11,13 +11,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import multiprocessing as mp
 import os
 import queue
 import subprocess
 import sys
 import time
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import as_completed
 from pathlib import Path
 from typing import Optional
 
@@ -54,11 +53,16 @@ def detect_num_gpus() -> int:
 
 
 class GPUQueue:
-    """Manages GPU allocation across parallel workers using a multiprocessing queue."""
+    """Manages GPU allocation across parallel workers.
+
+    Uses queue.Queue (stdlib thread-safe) since our executor is
+    ThreadPoolExecutor, not ProcessPoolExecutor. multiprocessing.Queue
+    is not guaranteed thread-safe when accessed from threads.
+    """
 
     def __init__(self, num_gpus: int):
         self.num_gpus = max(1, num_gpus)
-        self.queue: mp.Queue = mp.Queue()
+        self.queue: queue.Queue = queue.Queue()
         for gpu_id in range(self.num_gpus):
             self.queue.put(gpu_id)
 
@@ -220,25 +224,46 @@ def run_parallel_seeds(
 
 
 def aggregate_results(results: list[dict], metric_name: Optional[str] = None) -> dict:
-    """Aggregate metric values across seed results using the stats tool."""
+    """Aggregate metric values across seed results using the stats tool.
+
+    If metric_name is None, picks a canonical metric across all seeds:
+    the alphabetically-first metric name that appears in EVERY successful seed.
+    This guarantees deterministic, consistent aggregation.
+    """
     from tools.stats import aggregate_seeds
+
+    # Determine which metric to aggregate
+    if metric_name is None:
+        # Find metrics present in ALL successful seeds
+        successful = [r for r in results if r.get("exit_code") == 0 and r.get("metrics")]
+        if not successful:
+            return {"error": "No successful seeds with metrics", "seeds_run": len(results)}
+        common_metrics = set(successful[0]["metrics"].keys())
+        for r in successful[1:]:
+            common_metrics &= set(r["metrics"].keys())
+        if not common_metrics:
+            return {
+                "error": "No metric present in all seeds — per-seed metrics diverge",
+                "seeds_run": len(results),
+                "per_seed_metrics": [list(r.get("metrics", {}).keys()) for r in successful],
+            }
+        # Canonical choice: alphabetically first
+        metric_name = sorted(common_metrics)[0]
 
     values = []
     for r in results:
         m = r.get("metrics", {})
-        if metric_name:
-            if metric_name in m:
-                values.append(float(m[metric_name]))
-        else:
-            # Use the first numeric metric found
-            for _, v in m.items():
-                values.append(float(v))
-                break
+        if metric_name in m:
+            values.append(float(m[metric_name]))
 
     if not values:
-        return {"error": "No metric values found in any seed", "seeds_run": len(results)}
+        return {
+            "error": f"Metric '{metric_name}' not found in any seed",
+            "seeds_run": len(results),
+        }
 
     agg = aggregate_seeds(values)
+    agg["metric_name"] = metric_name
     agg["seeds_run"] = len(results)
     agg["seeds_successful"] = sum(1 for r in results if r.get("exit_code") == 0)
     return agg

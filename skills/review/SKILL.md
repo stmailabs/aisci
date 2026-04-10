@@ -404,14 +404,19 @@ We've now gathered 4 independent review layers:
 - Scientific critical thinking assessment (optional)
 - Octopus multi-model debate (optional, from step 11)
 
-**Aggregating these through a single Claude call reintroduces the bias we just eliminated with multi-model review.** Use Octopus for the synthesis itself:
+**Aggregating these through a single Claude call reintroduces the bias we just eliminated with multi-model review.** Use Octopus for the synthesis itself when available.
 
-**If Octopus available**:
+**Check Octopus availability first**:
+```bash
+claude plugin list --json 2>/dev/null | python3 -c "import json,sys;any('octo' in p['id'] for p in json.load(sys.stdin)) and print('OCTOPUS_OK') or print('OCTOPUS_MISSING')" 2>/dev/null
+```
+
+**If `OCTOPUS_OK`** (and `--no-octopus` not passed):
 ```
 /octo:debate "Synthesize these independent paper reviews into a final recommendation. Reviews to synthesize: [paste all panel JSONs + octopus review]. Identify: (1) consensus strengths (agreed by 75%+ reviewers), (2) consensus weaknesses, (3) genuine disagreements (where reviewers diverge >2 points), (4) aggregated scores, (5) final accept/reject recommendation with confidence level. Use the 75% consensus gate — flag anything where providers genuinely disagree."
 ```
 
-**If Octopus unavailable** (fallback): use Claude alone to aggregate, but note in the output that this is a single-model aggregation.
+**If `OCTOPUS_MISSING` or `--no-octopus`** (fallback): use Claude alone to aggregate the 4 panel reviews into the same JSON structure. Add `"synthesized_by": "claude_alone"` to the output and note in the summary that this is a single-model aggregation (less robust than multi-model synthesis).
 
 Save the synthesis to `<output_dir>/final_synthesis.json`:
 
