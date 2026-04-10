@@ -12,7 +12,7 @@ You are writing a complete research paper based on experiment results.
 
 - `--exp-dir <path>`: Experiment directory (required)
 - `--type <icbinb|icml>`: Paper template type — icbinb (4-page workshop) or icml (8-page, default: icbinb)
-- `--cite-rounds <N>`: Number of citation gathering rounds (default: 5)
+- `--cite-rounds <N>`: Number of citation gathering rounds (default: 15)
 - `--reflections <N>`: Number of writeup reflection rounds (default: 3)
 - `--no-scientific-skills`: Skip enhanced writing and citation verification even if plugin is available
 
@@ -78,7 +78,7 @@ mkdir -p <exp_dir>/latex/figures
 cp <exp_dir>/figures/*.png <exp_dir>/figures/*.pdf <exp_dir>/latex/figures/ 2>/dev/null || true
 ```
 
-### 3. Gather Citations (up to cite-rounds iterations)
+### 3. Gather Citations (up to cite-rounds iterations, default 15)
 
 First, check search backend availability:
 ```bash

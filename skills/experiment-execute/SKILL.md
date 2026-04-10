@@ -58,6 +58,24 @@ uv run aisci-metrics <exp_dir>/logs/step_<N>_output.txt --json
 
 If plots exist in `<exp_dir>/workspace/figures/`, view each PNG with the Read tool. Assess convergence, overfitting, dataset consistency.
 
+### 4b. VLM Score for Node Selection
+
+After analyzing each plot, compute a holistic VLM score (0.0-1.0) for this node's plot quality:
+
+Score dimensions (each 0.0-1.0, average them):
+- **Convergence clarity**: Do training curves show clear convergence? (1.0 = clean, 0.0 = chaotic)
+- **Consistency across datasets**: Are results consistent when multiple datasets tested? (1.0 = consistent, 0.0 = contradictory)
+- **Publication quality**: Are axes labeled, legends clear, resolution adequate? (1.0 = publishable, 0.0 = draft)
+- **Supports claims**: Do the figures actually support the node's metric claims? (1.0 = yes, 0.0 = misleading)
+
+Example scoring:
+- All criteria met: 0.9
+- One weakness (e.g., poor resolution): 0.7
+- Multiple weaknesses (poor labels, unclear trend): 0.4
+- Missing or broken figures: 0.0
+
+Pass this score to `aisci-state add-node` via `--vlm-score <value>`. The smart BFTS node selector uses it as a tiebreaker when metric values are similar, and the best-node detector will prefer higher-quality nodes.
+
 ### 4. Determine Bug Status
 
 Buggy if: exception raised, no valid metrics, timeout, NaN/Inf in metrics.
@@ -73,6 +91,7 @@ uv run aisci-state add-node <exp_dir> <stage> \
     --metric '<metric_json>' \
     --datasets <dataset1> <dataset2> \
     --plots <plot_paths> \
+    --vlm-score <0.0-1.0> \
     [--parent-id <parent_id>] \
     [--buggy] \
     [--analysis "<analysis>"]

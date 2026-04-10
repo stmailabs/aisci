@@ -96,6 +96,21 @@ View each generated figure using the Read tool. Evaluate:
 - Do the figures tell a coherent story?
 - Are there any visual artifacts or issues?
 
+### Deduplication (v2-style)
+
+After reviewing all figures, identify duplicates or near-duplicates:
+
+1. **Exact duplicates**: Same data plotted the same way (e.g., two training curves from identical runs)
+2. **Near-duplicates**: Similar content with minor variations (e.g., same metric on same data with slightly different color schemes)
+3. **Redundant aggregations**: A grouped plot that duplicates information already in individual subplots
+
+For each duplicate pair, decide:
+- **Keep one, remove the other**: When content is truly identical
+- **Merge into one figure**: When the plots complement each other (e.g., train + val curves → combined plot)
+- **Keep both**: When each serves a distinct narrative purpose (e.g., per-dataset view + aggregate view)
+
+Delete redundant files from `<exp_dir>/figures/` and update the plot description accordingly. The goal is to minimize figure count while preserving all unique information — critical for page-limited papers (ICBINB = 4 pages).
+
 ### 6. Iterate (up to 3 rounds)
 
 If figures need improvement:

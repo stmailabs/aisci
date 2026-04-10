@@ -99,6 +99,34 @@ Agent 2: /aisci:experiment-step --exp-dir <exp_dir> --stage <stage> --action dra
 
 For stages 2-4, carry the best node from the previous stage as the starting point (no new drafts).
 
+#### a0. Dynamic Sub-stage Planning (new in v0.5)
+
+**Run this at the START of stages 2-4 only** (after stage transition, before iterations begin). Skip for stage 1.
+
+Before starting iterations in this stage, generate 2-3 concrete sub-goals based on the previous stage's findings:
+
+1. Read the stage briefing from the previous stage
+2. Identify: (a) what worked, (b) what failed, (c) what's still unknown
+3. Generate 2-3 sub-goals for THIS stage that:
+   - Address the stage's core goal (baseline tuning / creative research / ablation)
+   - Build on the previous stage's strengths
+   - Avoid repeating failures
+4. Save the sub-goals to `<exp_dir>/state/<stage>/substages.json`:
+   ```json
+   {
+     "sub_goals": [
+       {"name": "hyperparameter_sweep", "description": "...", "target_iters": 4},
+       {"name": "dataset_expansion", "description": "...", "target_iters": 4},
+       {"name": "architectural_refinement", "description": "...", "target_iters": 4}
+     ],
+     "current_substage": "hyperparameter_sweep"
+   }
+   ```
+5. Allocate iterations across sub-goals (roughly equal by default)
+6. Switch sub-goals if the current one stagnates (no improvement for 3+ iterations)
+
+This mirrors v2's AgentManager sub-stage generation but runs in-context.
+
 #### b. Iterative Refinement Loop
 
 If the superpowers plugin is available, use `/superpowers:writing-plans` at the start of each stage to create a brief plan for what this stage should achieve and how to approach the iterations. This helps maintain focus across many iterations.
@@ -106,6 +134,25 @@ If the superpowers plugin is available, use `/superpowers:writing-plans` at the 
 Repeat until stage completion (max_iters reached or completion criteria met):
 
 1. **Select candidate nodes** for expansion:
+
+   **LLM-guided node evaluation** (Claude-native, better than rule-based selection):
+
+   Before calling `select-nodes`, read the current journal and pick candidates holistically:
+
+   1. Run `aisci-state journal-summary <exp_dir> <stage>` to see progress
+   2. For the top 3 candidate nodes (by metric), read each node's full state including:
+      - Metric value and trend
+      - VLM score (from vlm_score field)
+      - Datasets successfully tested
+      - Error pattern (if any)
+   3. Use your judgment to select 1-2 parents to expand, considering:
+      - Which has the strongest overall progress (not just metric)?
+      - Which explores a different direction (diversity)?
+      - Are any trapped in local optima (high metric but poor plot quality)?
+   4. Fall back to `aisci-state select-nodes` if the journal has <5 nodes (not enough context yet)
+
+   This gives you v2's LLM-guided selection without needing a separate API call.
+
    ```bash
    uv run aisci-state select-nodes <exp_dir> <stage>
    ```
@@ -127,49 +174,34 @@ Repeat until stage completion (max_iters reached or completion criteria met):
    **Stage 3 completion**: Execution time scaling properly (>50% of timeout); tested on 3 datasets.
    **Stage 4 completion**: Max iterations reached (always run to completion).
 
-#### c. Multi-Seed Evaluation
+#### c. Multi-Seed Evaluation (parallel)
 
-When a stage completes, run the best node's code with multiple random seeds to validate robustness:
+Use the parallel multi-seed runner to validate robustness:
+```bash
+uv run aisci-multi-seed <exp_dir>/workspace/runfile.py \
+    --seeds 42 123 456 \
+    --workdir <exp_dir>/workspace \
+    --log-dir <exp_dir>/logs \
+    --aggregate > <exp_dir>/state/<stage>/seed_aggregate.json
+```
 
-1. Get the best node's code:
-   ```bash
-   uv run aisci-state best-node <exp_dir> <stage> --show-code
-   ```
+This runs all seeds concurrently with GPU queue management. Each seed gets its own GPU (CUDA_VISIBLE_DEVICES set automatically). On Apple Silicon (MPS), seeds run sequentially but still use the aggregator.
 
-2. Run it with different seeds (42, 123, 456). First check if the code uses the SEED env var (new style) or hardcoded seeds (old style):
-   ```bash
-   if grep -q 'os.environ.get.*SEED' <exp_dir>/workspace/runfile.py; then
-       # New style: uses SEED env var
-       for seed in 42 123 456; do
-           cd <exp_dir>/workspace && SEED=$seed timeout 3600 uv run python3 runfile.py 2>&1 | tee <exp_dir>/logs/seed_${seed}_output.txt
-       done
-   else
-       # Old style: hardcoded seed — use sed fallback for backward compatibility
-       for seed in 42 123 456; do
-           sed "s/torch.manual_seed([0-9]*)/torch.manual_seed($seed)/g" <exp_dir>/workspace/runfile.py > <exp_dir>/workspace/runfile_seed_$seed.py
-           cd <exp_dir>/workspace && timeout 3600 uv run python3 runfile_seed_$seed.py 2>&1 | tee <exp_dir>/logs/seed_${seed}_output.txt
-       done
-   fi
-   ```
+After aggregation, mark the multi-seed result as a seed-agg node:
+```bash
+uv run aisci-state add-node <exp_dir> <stage> \
+    --plan "Multi-seed validation of best node" \
+    --code <exp_dir>/state/<stage>/best_solution_*.py \
+    --metric "@<exp_dir>/state/<stage>/seed_aggregate.json" \
+    --is-seed-agg-node \
+    --datasets <datasets>
+```
 
-3. **Collect and aggregate metrics across seeds** using the stats tool:
-   ```bash
-   # Parse each seed's output into a metric value
-   for seed in 42 123 456; do
-       uv run aisci-metrics <exp_dir>/logs/seed_${seed}_output.txt --json
-   done
-   # Collect the values and aggregate:
-   uv run aisci-stats aggregate <v1> <v2> <v3>
-   ```
+The seed-agg node becomes the "official" best node for stage transition (more statistically robust than single-run best).
 
-   The aggregate output includes: mean, std, 95% CI, min/max, and a `stable` flag. **If `stable` is false** (std/mean > 5%), the result is unreliable — warn the user and consider running 2 more seeds (789, 101) for a total of 5.
+The aggregate output includes: mean, std, 95% CI, min/max, and a `stable` flag. **If `stable` is false** (std/mean > 5%), the result is unreliable — warn the user and consider running 2 more seeds (789, 101) for a total of 5.
 
-   Save the aggregate to `<exp_dir>/state/<stage>/seed_aggregate.json` for the writeup phase:
-   ```bash
-   uv run aisci-stats aggregate <v1> <v2> <v3> > <exp_dir>/state/<stage>/seed_aggregate.json
-   ```
-
-   The writeup will read this file and report metrics with error bars (e.g., "89.1% ± 1.2%"), not single-point estimates.
+The writeup will read `seed_aggregate.json` and report metrics with error bars (e.g., "89.1% ± 1.2%"), not single-point estimates.
 
 #### d. Stage Transition
 

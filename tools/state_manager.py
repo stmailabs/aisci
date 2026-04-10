@@ -106,9 +106,10 @@ def create_node(
         "plots_generated": False,
         "plots": [],
         "plot_paths": [],
-        # VLM feedback
+        # VLM feedback (scored per plot + aggregated)
         "plot_analyses": [],
         "vlm_feedback_summary": [],
+        "vlm_score": None,  # 0.0-1.0, Claude's holistic plot quality rating
         "datasets_successfully_tested": [],
         # Execution time feedback
         "exec_time_feedback": "",
@@ -189,23 +190,46 @@ def get_good_nodes(journal: Dict) -> List[Dict]:
     ]
 
 
-def get_best_node(journal: Dict) -> Optional[Dict]:
+def get_best_node(journal: Dict, prefer_seed_agg: bool = True) -> Optional[Dict]:
     """Return the best non-buggy node by metric comparison.
 
-    Falls back to the most recent good node if metrics are not comparable.
+    If `prefer_seed_agg=True` and at least one multi-seed aggregation node exists,
+    the best is selected from among those (more statistically robust than single runs).
+    Falls back to regular good nodes otherwise.
     """
     good = get_good_nodes(journal)
     if not good:
         return None
+
+    if prefer_seed_agg:
+        agg_nodes = [n for n in good if n.get("is_seed_agg_node")]
+        if agg_nodes:
+            good = agg_nodes  # Restrict comparison to aggregated nodes only
+
     if len(good) == 1:
         return good[0]
 
-    # Compare by metric
+    # Compare by metric (with VLM score as tiebreaker)
     best = good[0]
     for node in good[1:]:
         if _metric_is_better(node.get("metric"), best.get("metric")):
             best = node
+        elif _metrics_equal(node.get("metric"), best.get("metric")):
+            # Tiebreak by VLM score
+            node_vlm = node.get("vlm_score") or 0.0
+            best_vlm = best.get("vlm_score") or 0.0
+            if node_vlm > best_vlm:
+                best = node
     return best
+
+
+def _metrics_equal(a: Optional[Dict], b: Optional[Dict], tol: float = 1e-6) -> bool:
+    """Check if two metrics are numerically equal within tolerance."""
+    va = _metric_mean_value(a)
+    vb = _metric_mean_value(b)
+    if va is None or vb is None:
+        return False
+    return abs(va - vb) < tol
 
 
 def _metric_is_better(a: Optional[Dict], b: Optional[Dict]) -> bool:
@@ -973,6 +997,14 @@ examples:
     add_p.add_argument("--analysis", default=None, help="Analysis text or @file")
     add_p.add_argument("--plots", nargs="*", default=[], help="Plot file paths")
     add_p.add_argument("--datasets", nargs="*", default=[], help="Datasets tested")
+    add_p.add_argument("--vlm-score", type=float, default=None,
+                       help="VLM plot quality score 0.0-1.0")
+    add_p.add_argument("--vlm-feedback", default=None,
+                       help="VLM feedback summary text")
+    add_p.add_argument("--is-seed-node", action="store_true",
+                       help="Mark as seed node (first successful node in stage)")
+    add_p.add_argument("--is-seed-agg-node", action="store_true",
+                       help="Mark as multi-seed aggregation node")
 
     # best-node — show the best node in a stage
     best_p = sub.add_parser("best-node", help="Show best node in a stage")
@@ -1134,6 +1166,12 @@ examples:
             node["analysis"] = _read_file_or_str(args.analysis)
         node["plot_paths"] = args.plots
         node["datasets_successfully_tested"] = args.datasets
+        if args.vlm_score is not None:
+            node["vlm_score"] = args.vlm_score
+        if args.vlm_feedback:
+            node["vlm_feedback_summary"] = [_read_file_or_str(args.vlm_feedback)]
+        node["is_seed_node"] = args.is_seed_node
+        node["is_seed_agg_node"] = args.is_seed_agg_node
 
         add_node(journal, node)
         save_journal(args.exp_dir, args.stage, journal)

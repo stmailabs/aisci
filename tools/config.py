@@ -134,7 +134,7 @@ class Config:
 
     # Paper writeup
     writeup_type: str = "icbinb"  # "icbinb" (4-page) or "icml" (8-page)
-    num_cite_rounds: int = 5
+    num_cite_rounds: int = 15
     num_writeup_reflections: int = 3
 
     # Review

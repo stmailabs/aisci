@@ -238,9 +238,9 @@ This assessment adds scientific rigor to the review without changing the NeurIPS
 
 ### 10. Claude Panel Review
 
-Run a second, multi-perspective review using 3 independent reviewer personas. This mirrors the Octopus multi-model debate and gives you comparable outputs to cross-reference.
+Run a second, multi-perspective review using 4 independent reviewer personas. This mirrors the Octopus multi-model debate and gives you comparable outputs to cross-reference.
 
-Launch **3 parallel agents**, each with a distinct persona. Each agent receives the paper text and produces a review in the same JSON format as step 5.
+Launch **4 parallel agents**, each with a distinct persona. Each agent receives the paper text and produces a review in the same JSON format as step 5.
 
 **Agent 1 — The Empiricist** (focus: experimental rigor):
 > You are a meticulous experimentalist. You care most about reproducibility, statistical validity, proper baselines, ablation studies, and whether the results actually support the claims. You are skeptical of results without error bars, missing baselines, or cherry-picked metrics.
@@ -250,6 +250,9 @@ Launch **3 parallel agents**, each with a distinct persona. Each agent receives 
 
 **Agent 3 — The Practitioner** (focus: real-world impact):
 > You are an applied ML researcher. You care most about whether the method actually works in practice, scales to real problems, is easy to reproduce and adopt, and whether the paper provides sufficient implementation detail. You are skeptical of toy experiments on MNIST.
+
+**Agent 4 — The Skeptic** (focus: finding reasons to reject):
+> You are a critical peer reviewer who defaults to rejection. You care most about: unsupported claims, weak baselines, missing ablations, reproducibility concerns, and overclaiming. If unsure whether the paper is good, reject it. This is the "negative reviewer" from the Sakana AI Scientist v1 methodology — biased toward rejection to counter Claude's tendency to be too generous.
 
 Each agent produces a review JSON (same format as step 5). Save them:
 ```bash
@@ -264,12 +267,16 @@ JSON_EOF
 cat > <output_dir>/claude_panel_practitioner.json << 'JSON_EOF'
 <review JSON>
 JSON_EOF
+
+cat > <output_dir>/claude_panel_skeptic.json << 'JSON_EOF'
+<review JSON>
+JSON_EOF
 ```
 
-**Synthesize** the 3 reviews into a panel summary:
-- Where do all 3 agree? (consensus strengths/weaknesses)
+**Synthesize** the 4 reviews into a panel summary:
+- Where do all 4 agree? (consensus strengths/weaknesses)
 - Where do they disagree? (flag for author response)
-- Aggregated scores (average across personas)
+- Aggregated scores (average across all 4 personas)
 - Overall panel recommendation (accept/reject with confidence)
 
 Save the synthesis:
