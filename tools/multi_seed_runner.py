@@ -83,9 +83,10 @@ def _run_seed(args: dict) -> dict:
     Returns {"seed": N, "exit_code": int, "stdout": str, "stderr": str, "duration": float, "metrics": dict}
     """
     seed = args["seed"]
-    code_path = args["code_path"]
-    workdir = args["workdir"]
-    log_dir = args["log_dir"]
+    # Resolve paths to absolute so `cwd` doesn't re-join them
+    code_path = str(Path(args["code_path"]).resolve())
+    workdir = str(Path(args["workdir"]).resolve())
+    log_dir = str(Path(args["log_dir"]).resolve())
     gpu_id = args.get("gpu_id")
     timeout = args.get("timeout", 3600)
 
@@ -100,7 +101,7 @@ def _run_seed(args: dict) -> dict:
     start = time.time()
     try:
         result = subprocess.run(
-            ["python3", str(code_path)],
+            ["python3", code_path],
             cwd=workdir,
             env=env,
             capture_output=True,

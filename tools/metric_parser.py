@@ -116,7 +116,27 @@ SKIP_PATTERNS = [
     r"^loading",
     r"^\d+/\d+\s*\[",  # progress bars
     r"^Files already downloaded",
+    # Shell / Python error messages (these often have colon + digit that looks like a metric)
+    r"command not found",
+    r"\(eval\):",  # zsh eval errors
+    r"^Traceback",
+    r"^\s*File \"",  # Python stack trace line
+    r"^\s*at \w+\.",  # generic stack trace
+    r"line \d+:",  # bash error format
+    r"^\w+Error:",  # Python exception format (ValueError:, KeyError:, etc.)
+    r"^\w+Warning:",
 ]
+
+# Metric names must match this pattern to be accepted (rejects error-y junk like "eval", "line", etc.)
+# Must be 2-40 chars, start with letter, contain only alnum/underscore/hyphen/slash
+_VALID_NAME_RE = re.compile(r"^[a-zA-Z][\w\-/]{1,39}$")
+
+# Metric names that are clearly not metrics (false positive sinks)
+BLACKLISTED_NAMES = {
+    "eval", "line", "file", "warning", "error", "info", "debug",
+    "traceback", "command", "at", "in", "of", "on", "to", "from",
+    "epoch", "step", "iter", "iteration",  # these are counters, not metrics
+}
 
 
 def parse_metrics_from_output(
@@ -152,6 +172,13 @@ def parse_metrics_from_output(
         for pattern in METRIC_PATTERNS:
             for match in re.finditer(pattern, line, re.IGNORECASE):
                 name = match.group("name").strip()
+                # Normalize name for validation
+                name_clean = name.replace(" ", "_").lower()
+                # Reject invalid names (errors, warnings, counter names, etc.)
+                if not _VALID_NAME_RE.match(name.replace(" ", "_")):
+                    continue
+                if name_clean in BLACKLISTED_NAMES:
+                    continue
                 try:
                     value = float(match.group("value"))
                 except ValueError:

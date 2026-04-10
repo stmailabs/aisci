@@ -36,7 +36,12 @@ def get_dashboard(exp_dir: str) -> dict:
             journal = load_journal(exp_dir, stage)
             summary = get_journal_summary(journal)
             best = get_best_node(journal)
-            best_metric = best.get("metric", {}).get("value") if best else None
+            # Guard against `metric` being None (e.g., seed-agg node with missing aggregate)
+            best_metric = None
+            if best is not None:
+                m = best.get("metric")
+                if isinstance(m, dict):
+                    best_metric = m.get("value")
             stages_summary.append({
                 "stage": stage,
                 "label": STAGE_LABELS.get(stage, stage),
