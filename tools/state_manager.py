@@ -691,7 +691,12 @@ def _atomic_write_text(path: Path, content: str) -> None:
     # Use same directory so rename is atomic (same filesystem)
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=".tmp_" + path.name)
     try:
-        with os.fdopen(fd, "w") as f:
+        try:
+            f = os.fdopen(fd, "w")
+        except Exception:
+            os.close(fd)  # fdopen failed before taking ownership of fd
+            raise
+        with f:
             f.write(content)
         os.replace(tmp, path)  # atomic on POSIX + Windows
     except Exception:
