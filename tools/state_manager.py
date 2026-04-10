@@ -557,9 +557,64 @@ def transition_stage(
 
 
 def can_resume(exp_dir: str) -> bool:
-    """Check if an experiment can be resumed."""
+    """Check if an experiment can be resumed (fast boolean check)."""
     state_path = Path(exp_dir) / "state" / "experiment_state.json"
     return state_path.exists()
+
+
+def validate_resume(exp_dir: str) -> dict:
+    """Deep-validate an experiment directory for resume safety.
+
+    Returns a dict with ok=True and details if the directory is resumable,
+    or ok=False with specific missing/corrupted issues listed.
+    """
+    exp_path = Path(exp_dir)
+    issues: list[str] = []
+
+    if not exp_path.exists():
+        return {"ok": False, "issues": [f"Experiment directory does not exist: {exp_dir}"]}
+
+    state_path = exp_path / "state" / "experiment_state.json"
+    if not state_path.exists():
+        issues.append(f"Missing state file: {state_path}")
+    else:
+        try:
+            with open(state_path) as f:
+                state = json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            issues.append(f"Corrupted state file: {e}")
+            state = {}
+
+    workspace = exp_path / "workspace"
+    if not workspace.exists():
+        issues.append(f"Missing workspace directory: {workspace}")
+
+    logs = exp_path / "logs"
+    if not logs.exists():
+        issues.append(f"Missing logs directory: {logs}")
+
+    # Validate journals for any stages that were started
+    started_stages = []
+    state_dir = exp_path / "state"
+    if state_dir.exists():
+        for stage in STAGE_NAMES:
+            jpath = state_dir / stage / "journal.json"
+            if jpath.exists():
+                started_stages.append(stage)
+                try:
+                    with open(jpath) as f:
+                        journal = json.load(f)
+                    if not isinstance(journal.get("nodes"), list):
+                        issues.append(f"Corrupted journal (missing nodes list): {jpath}")
+                except (json.JSONDecodeError, OSError) as e:
+                    issues.append(f"Corrupted journal for {stage}: {e}")
+
+    return {
+        "ok": len(issues) == 0,
+        "issues": issues,
+        "started_stages": started_stages,
+        "exp_dir": str(exp_path),
+    }
 
 
 # ── Journal persistence ──────────────────────────────────────────────────────
@@ -1006,6 +1061,11 @@ examples:
     add_p.add_argument("--is-seed-agg-node", action="store_true",
                        help="Mark as multi-seed aggregation node")
 
+    # validate-resume — deep-check an experiment directory for resume safety
+    vr_p = sub.add_parser("validate-resume",
+                          help="Deep-validate an experiment directory for resume safety")
+    vr_p.add_argument("exp_dir", help="Experiment directory")
+
     # best-node — show the best node in a stage
     best_p = sub.add_parser("best-node", help="Show best node in a stage")
     best_p.add_argument("exp_dir", help="Experiment directory")
@@ -1182,6 +1242,11 @@ examples:
             "is_buggy": node["is_buggy"],
             "metric": node.get("metric"),
         }, indent=2))
+
+    elif args.command == "validate-resume":
+        result = validate_resume(args.exp_dir)
+        print(json.dumps(result, indent=2))
+        sys.exit(0 if result["ok"] else 1)
 
     elif args.command == "best-node":
         journal = load_journal(args.exp_dir, args.stage)

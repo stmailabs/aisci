@@ -174,6 +174,8 @@ Repeat until stage completion (max_iters reached or completion criteria met):
    **Stage 3 completion**: Execution time scaling properly (>50% of timeout); tested on 3 datasets.
    **Stage 4 completion**: Max iterations reached (always run to completion).
 
+   **HALT condition**: If `max_iters` is reached and `good_nodes == 0` for any stage, the pipeline MUST halt with an error. Do not proceed to multi-seed evaluation or stage transition — there is no code to promote. Report the error analysis (via `uv run aisci-state error-analysis <exp_dir> <stage>`) and suggest the user fix the root cause before resuming.
+
 #### c. Multi-Seed Evaluation (parallel)
 
 Use the parallel multi-seed runner to validate robustness:
@@ -182,7 +184,8 @@ uv run aisci-multi-seed <exp_dir>/workspace/runfile.py \
     --seeds 42 123 456 \
     --workdir <exp_dir>/workspace \
     --log-dir <exp_dir>/logs \
-    --aggregate > <exp_dir>/state/<stage>/seed_aggregate.json
+    --aggregate \
+    --output-file <exp_dir>/state/<stage>/seed_aggregate.json
 ```
 
 This runs all seeds concurrently with GPU queue management. Each seed gets its own GPU (CUDA_VISIBLE_DEVICES set automatically). On Apple Silicon (MPS), seeds run sequentially but still use the aggregator.
@@ -231,13 +234,15 @@ When a stage completes:
 
 When a stage completes, run code review on the best node before transitioning.
 
+**PREREQUISITE: Best solution file must exist.** Run `uv run aisci-state save-best <exp_dir> <stage>` first. If it prints "No good nodes to save" or exits with an error, SKIP this entire section (there's nothing to review) and log a warning. This is a normal state for stages that completed with all-buggy nodes (which should have already halted the pipeline — see HALT condition above).
+
 **Never run both Octopus review and `/code-review`** — they overlap significantly and waste tokens. Octopus already includes code-focused providers that subsume most of what `/code-review` catches. Pick one based on availability.
 
 **Primary: Octopus multi-model review** (default when `octopus.enabled` is not `"false"` and the plugin is installed):
 ```
-/octo:review <exp_dir>/state/<current_stage>/best_solution_*.py
+/octo:review "<exp_dir>/state/<current_stage>/best_solution_*.py"
 ```
-This dispatches to multiple providers for adversarial code review. Catches ML-specific issues (data leakage, incorrect metrics, device handling, numerical instability) as well as general code quality.
+This dispatches to multiple providers for adversarial code review. Catches ML-specific issues (data leakage, incorrect metrics, device handling, numerical instability) as well as general code quality. Quote the path in case `<exp_dir>` contains spaces.
 
 **Fallback: `/code-review` plugin** (only if Octopus is unavailable):
 If the claude-octopus plugin is not installed, or `octopus.enabled` is `"false"`, or `--no-octopus` was passed, use the general `/code-review` plugin for code quality review. This is less thorough for ML issues but catches basic code quality problems.
@@ -257,7 +262,7 @@ If the claude-octopus plugin is not installed, or `octopus.enabled` is `"false"`
    Where `<completed_stage>` is the stage that just finished (e.g., `stage1_initial`), NOT the next stage.
    This writes the best node's code to `<exp_dir>/state/<current_stage>/best_solution_<id>.py`. Use that file path for the review:
    ```
-   /octo:review <exp_dir>/state/<current_stage>/best_solution_<id>.py
+   /octo:review "<exp_dir>/state/<current_stage>/best_solution_<id>.py"
    ```
 
 3. **Parse the review output**. Octopus review returns prose (Markdown), not structured JSON. Read the output and identify any critical issues mentioned (data leakage, incorrect metrics, statistical errors, device bugs).

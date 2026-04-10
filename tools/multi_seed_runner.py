@@ -288,7 +288,9 @@ def main():
     parser.add_argument("--metric", default=None,
                         help="Specific metric name to aggregate (default: first found)")
     parser.add_argument("--aggregate", action="store_true",
-                        help="Print aggregated statistics instead of per-seed results")
+                        help="Output aggregated statistics instead of per-seed results")
+    parser.add_argument("--output-file", default=None,
+                        help="Write JSON output to this file instead of stdout (safer than shell redirection)")
     args = parser.parse_args()
 
     results = run_parallel_seeds(
@@ -302,10 +304,17 @@ def main():
     )
 
     if args.aggregate:
-        agg = aggregate_results(results, metric_name=args.metric)
-        print(json.dumps(agg, indent=2))
+        payload = aggregate_results(results, metric_name=args.metric)
     else:
-        print(json.dumps({"results": results}, indent=2))
+        payload = {"results": results}
+
+    output_json = json.dumps(payload, indent=2)
+    if args.output_file:
+        Path(args.output_file).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.output_file).write_text(output_json)
+        print(f"Wrote {args.output_file}", file=sys.stderr)
+    else:
+        print(output_json)
 
 
 if __name__ == "__main__":
