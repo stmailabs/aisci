@@ -29,9 +29,35 @@ Parse these from the user's message or arguments.
 
 ## Procedure
 
-### 0. Locate Plugin Root
+### 0. Check for Resume (Atomic Checkpointing)
+
+Before generating new code, check if this node already has partial progress from a previous crashed run. Generate a new node_id OR use the provided `--resume-node <id>` to continue an existing node:
 
 ```bash
+# If --resume-node is provided, check checkpoint status:
+uv run aisci-state checkpoint-status <exp_dir> <stage> <node_id>
+```
+
+This returns the `next_step` needed:
+- `generate`: start fresh (no code yet)
+- `execute`: code exists but not yet run, skip to step 4
+- `parse_metrics`: exec log exists, skip to step 5
+- `record_node`: metrics exist, skip to step 8
+- `complete`: node fully processed, nothing to do
+
+After each major step below, **save a checkpoint** so the node can be resumed if interrupted:
+```bash
+# After code generation:
+echo "$generated_code" | uv run aisci-state save-checkpoint <exp_dir> <stage> <node_id> code
+
+# After execution:
+cat <exec_log_file> | uv run aisci-state save-checkpoint <exp_dir> <stage> <node_id> exec
+
+# After metrics parsing:
+echo "$metrics_json" | uv run aisci-state save-checkpoint <exp_dir> <stage> <node_id> metrics
+
+# After full node recorded:
+uv run aisci-state save-checkpoint <exp_dir> <stage> <node_id> done
 ```
 
 ### 1. Load Context
@@ -157,10 +183,16 @@ If plots were generated in `<exp_dir>/workspace/figures/`:
 - Use the Read tool to view each generated PNG file
 - Analyze: convergence, overfitting, consistency across datasets, ablation clarity
 
-### 7. Determine Bug Status
+### 7. Determine Bug Status + Classify Error
 
 **Buggy** if ANY of: exception raised, no valid metrics, timeout, NaN/Inf in metrics.
 **Not buggy** if: execution completed + at least one valid metric.
+
+**If buggy, classify the error** to enable pattern detection:
+```bash
+cat <exp_dir>/logs/step_<N>_output.txt | uv run aisci-classify classify
+```
+This returns a JSON with `category` (e.g., CUDA_OOM, SHAPE_MISMATCH, IMPORT_ERROR) and a `recommendation`. Include the category in the node's analysis field.
 
 ### 8. Save Node to Journal
 

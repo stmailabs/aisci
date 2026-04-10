@@ -625,6 +625,261 @@ def find_duplicate_node(journal: dict, code: str) -> Optional[dict]:
     return None
 
 
+def find_cross_stage_duplicate(exp_dir: str, current_stage: str, code: str) -> Optional[dict]:
+    """Check if identical code was already executed in ANY earlier stage."""
+    stages_order = ["stage1_initial", "stage2_baseline", "stage3_creative", "stage4_ablation"]
+    try:
+        current_idx = stages_order.index(current_stage)
+    except ValueError:
+        return None
+    for stage in stages_order[:current_idx]:
+        try:
+            journal = load_journal(exp_dir, stage)
+        except (FileNotFoundError, json.JSONDecodeError):
+            continue
+        dup = find_duplicate_node(journal, code)
+        if dup:
+            return {**dup, "_source_stage": stage}
+    return None
+
+
+def code_similarity(a: str, b: str) -> float:
+    """Compute rough similarity between two code strings (0.0 - 1.0).
+
+    Uses normalized line-set Jaccard similarity. Quick and good enough
+    to detect "same code with minor tweaks".
+    """
+    def lines_set(code: str) -> set:
+        return set(
+            line.strip()
+            for line in code.splitlines()
+            if line.strip() and not line.strip().startswith("#")
+        )
+    a_lines = lines_set(a)
+    b_lines = lines_set(b)
+    if not a_lines or not b_lines:
+        return 0.0
+    intersection = a_lines & b_lines
+    union = a_lines | b_lines
+    return len(intersection) / len(union) if union else 0.0
+
+
+# ── Checkpointing (atomic per-node state) ────────────────────────────────────
+
+
+def _checkpoint_dir(exp_dir: str, stage: str, node_id: str) -> Path:
+    """Get the checkpoint directory for a node."""
+    d = Path(exp_dir) / "state" / stage / "checkpoints" / node_id
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def save_checkpoint(exp_dir: str, stage: str, node_id: str, step: str, data: Any) -> str:
+    """Save a checkpoint for a specific step of a node's lifecycle.
+
+    Steps:
+      - "code"    → generated code (str)
+      - "exec"    → execution output (str, full stdout/stderr)
+      - "metrics" → parsed metrics (dict)
+      - "plots"   → list of plot file paths (list)
+      - "done"    → marker that node is fully processed
+
+    Returns the checkpoint file path.
+    """
+    d = _checkpoint_dir(exp_dir, stage, node_id)
+    if step == "code":
+        path = d / "code.py"
+        path.write_text(data if isinstance(data, str) else json.dumps(data))
+    elif step == "exec":
+        path = d / "exec.log"
+        path.write_text(data if isinstance(data, str) else json.dumps(data))
+    elif step == "metrics":
+        path = d / "metrics.json"
+        path.write_text(json.dumps(data, indent=2))
+    elif step == "plots":
+        path = d / "plots.json"
+        path.write_text(json.dumps(data, indent=2))
+    elif step == "done":
+        path = d / "done.marker"
+        path.write_text(datetime.utcnow().isoformat())
+    else:
+        raise ValueError(f"Unknown checkpoint step: {step}")
+    return str(path)
+
+
+def load_checkpoint(exp_dir: str, stage: str, node_id: str, step: str) -> Optional[Any]:
+    """Load a checkpoint. Returns None if not present."""
+    d = _checkpoint_dir(exp_dir, stage, node_id)
+    if step == "code":
+        path = d / "code.py"
+        return path.read_text() if path.exists() else None
+    elif step == "exec":
+        path = d / "exec.log"
+        return path.read_text() if path.exists() else None
+    elif step == "metrics":
+        path = d / "metrics.json"
+        return json.loads(path.read_text()) if path.exists() else None
+    elif step == "plots":
+        path = d / "plots.json"
+        return json.loads(path.read_text()) if path.exists() else None
+    elif step == "done":
+        path = d / "done.marker"
+        return path.read_text() if path.exists() else None
+    return None
+
+
+def checkpoint_status(exp_dir: str, stage: str, node_id: str) -> dict:
+    """Report which checkpoints exist for a node, useful for resume logic."""
+    d = _checkpoint_dir(exp_dir, stage, node_id)
+    return {
+        "node_id": node_id,
+        "stage": stage,
+        "code": (d / "code.py").exists(),
+        "exec": (d / "exec.log").exists(),
+        "metrics": (d / "metrics.json").exists(),
+        "plots": (d / "plots.json").exists(),
+        "done": (d / "done.marker").exists(),
+        "next_step": _next_step(d),
+    }
+
+
+def _next_step(d: Path) -> str:
+    """Determine the next step to execute based on existing checkpoints."""
+    if (d / "done.marker").exists():
+        return "complete"
+    if not (d / "code.py").exists():
+        return "generate"
+    if not (d / "exec.log").exists():
+        return "execute"
+    if not (d / "metrics.json").exists():
+        return "parse_metrics"
+    return "record_node"
+
+
+def list_incomplete_checkpoints(exp_dir: str, stage: str) -> list[dict]:
+    """List all node checkpoints that are not yet 'done'. Useful for resume."""
+    checkpoint_root = Path(exp_dir) / "state" / stage / "checkpoints"
+    if not checkpoint_root.exists():
+        return []
+    incomplete = []
+    for node_dir in checkpoint_root.iterdir():
+        if not node_dir.is_dir():
+            continue
+        if not (node_dir / "done.marker").exists():
+            incomplete.append(checkpoint_status(exp_dir, stage, node_dir.name))
+    return incomplete
+
+
+# ── Error classification (wraps error_classifier) ────────────────────────────
+
+
+def get_stage_error_analysis(exp_dir: str, stage: str) -> dict:
+    """Analyze the error distribution in a stage and return actionable insights."""
+    try:
+        from tools.error_classifier import analyze_journal
+    except ImportError:
+        return {"error": "error_classifier module not available"}
+    journal = load_journal(exp_dir, stage)
+    return analyze_journal(journal)
+
+
+# ── Smart BFTS: prune dead branches, diversity-aware selection ───────────────
+
+
+def _node_error_type(node: dict) -> Optional[str]:
+    """Get error category for a node (using error_classifier). None if not buggy."""
+    if not node.get("is_buggy"):
+        return None
+    try:
+        from tools.error_classifier import classify_node
+        return classify_node(node)
+    except ImportError:
+        return "UNKNOWN"
+
+
+def _count_siblings_with_same_error(journal: dict, node: dict) -> int:
+    """Count how many siblings (same parent) have the same error type."""
+    parent_id = node.get("parent_id")
+    if parent_id is None:
+        # Siblings are all other root drafts
+        siblings = [n for n in journal["nodes"] if n.get("parent_id") is None and n["id"] != node["id"]]
+    else:
+        siblings = [n for n in journal["nodes"] if n.get("parent_id") == parent_id and n["id"] != node["id"]]
+    target_error = _node_error_type(node)
+    if not target_error:
+        return 0
+    return sum(1 for s in siblings if _node_error_type(s) == target_error)
+
+
+def get_nodes_for_expansion_smart(
+    journal: Dict,
+    max_debug_depth: int = 3,
+    debug_prob: float = 0.5,
+    prune_sibling_threshold: int = 3,
+) -> List[Dict]:
+    """Smart node selection for BFTS expansion.
+
+    Improvements over get_nodes_for_expansion:
+    - Prunes buggy nodes whose siblings already failed with same error type
+      (indicates structural issue, not fixable by debug)
+    - Prefers diverse parents over re-expanding same best node
+    - Skips nodes that hit max debug depth
+    """
+    import random
+
+    good = get_good_nodes(journal)
+    candidates: List[Dict] = []
+
+    # Filter buggy leaves: skip if too many siblings hit the same error
+    buggy_leaves_raw = [
+        n for n in journal["nodes"]
+        if n.get("is_buggy") is True
+        and not n.get("children_ids")
+        and node_debug_depth(n, journal) < max_debug_depth
+    ]
+    buggy_leaves = [
+        n for n in buggy_leaves_raw
+        if _count_siblings_with_same_error(journal, n) < prune_sibling_threshold
+    ]
+
+    # Add best good node
+    if good:
+        best = get_best_node(journal)
+        if best:
+            candidates.append(best)
+
+    # Optionally add a buggy node for debugging (but only if not pruned)
+    if buggy_leaves and random.random() < debug_prob:
+        candidates.append(random.choice(buggy_leaves))
+
+    # Add diversity: if we have multiple good nodes with different approaches, include one
+    if len(good) >= 2:
+        best_id = candidates[0]["id"] if candidates else None
+        diverse_options = [
+            n for n in good
+            if n["id"] != best_id
+            and not n.get("children_ids")  # leaf only
+        ]
+        if diverse_options and best_id:
+            # Pick the one most different from best
+            best_code = next((n.get("code", "") for n in good if n["id"] == best_id), "")
+            scored = [
+                (1 - code_similarity(best_code, n.get("code", "")), n)
+                for n in diverse_options
+            ]
+            scored.sort(key=lambda x: -x[0])  # highest diversity first
+            if scored and scored[0][0] > 0.3:  # only include if meaningfully different
+                candidates.append(scored[0][1])
+
+    # If no candidates, fall back to any leaf
+    if not candidates:
+        leaves = [n for n in journal["nodes"] if not n.get("children_ids")]
+        if leaves:
+            candidates.append(leaves[-1])
+
+    return candidates
+
+
 # ── CLI ──────────────────────────────────────────────────────────────────────
 
 def main():
@@ -726,6 +981,44 @@ examples:
     dedup_p.add_argument("exp_dir")
     dedup_p.add_argument("stage")
     dedup_p.add_argument("--code", required=True, help="Path to code file")
+    dedup_p.add_argument("--cross-stage", action="store_true",
+                         help="Also check earlier stages for duplicates")
+
+    # checkpoint-status — show checkpoint progress for a node
+    cp_status_p = sub.add_parser("checkpoint-status",
+                                 help="Show checkpoint status for a node (for resume logic)")
+    cp_status_p.add_argument("exp_dir")
+    cp_status_p.add_argument("stage")
+    cp_status_p.add_argument("node_id")
+
+    # list-incomplete — list nodes that haven't completed all checkpoints
+    inc_p = sub.add_parser("list-incomplete",
+                           help="List nodes with incomplete checkpoints (useful for resume)")
+    inc_p.add_argument("exp_dir")
+    inc_p.add_argument("stage")
+
+    # save-checkpoint — save a specific checkpoint for a node
+    sc_p = sub.add_parser("save-checkpoint",
+                          help="Save a checkpoint file for a node")
+    sc_p.add_argument("exp_dir")
+    sc_p.add_argument("stage")
+    sc_p.add_argument("node_id")
+    sc_p.add_argument("step", choices=["code", "exec", "metrics", "plots", "done"])
+    sc_p.add_argument("--from-file", help="Read data from file (alternative to stdin)")
+
+    # load-checkpoint — load a specific checkpoint for a node
+    lc_p = sub.add_parser("load-checkpoint",
+                          help="Load a checkpoint file for a node")
+    lc_p.add_argument("exp_dir")
+    lc_p.add_argument("stage")
+    lc_p.add_argument("node_id")
+    lc_p.add_argument("step", choices=["code", "exec", "metrics", "plots", "done"])
+
+    # error-analysis — analyze error patterns in a stage
+    ea_p = sub.add_parser("error-analysis",
+                          help="Classify errors in a stage and recommend fixes")
+    ea_p.add_argument("exp_dir")
+    ea_p.add_argument("stage")
 
     # test
     sub.add_parser("test", help="Run self-test")
@@ -759,7 +1052,8 @@ examples:
 
     elif args.command == "select-nodes":
         journal = load_journal(args.exp_dir, args.stage)
-        candidates = get_nodes_for_expansion(
+        # Use smart selection: prunes dead branches, prefers diverse parents
+        candidates = get_nodes_for_expansion_smart(
             journal,
             max_debug_depth=args.max_debug_depth,
             debug_prob=args.debug_prob,
@@ -889,9 +1183,56 @@ examples:
         code = Path(args.code).read_text()
         dup = find_duplicate_node(journal, code)
         if dup:
-            print(json.dumps({"duplicate": True, "node_id": dup["id"], "step": dup.get("step"), "metric": dup.get("metric")}))
+            print(json.dumps({"duplicate": True, "stage": args.stage, "node_id": dup["id"],
+                              "step": dup.get("step"), "metric": dup.get("metric")}))
+        elif getattr(args, "cross_stage", False):
+            cross_dup = find_cross_stage_duplicate(args.exp_dir, args.stage, code)
+            if cross_dup:
+                print(json.dumps({"duplicate": True, "stage": cross_dup.get("_source_stage"),
+                                  "node_id": cross_dup["id"], "step": cross_dup.get("step"),
+                                  "metric": cross_dup.get("metric"), "cross_stage": True}))
+            else:
+                print(json.dumps({"duplicate": False}))
         else:
             print(json.dumps({"duplicate": False}))
+
+    elif args.command == "checkpoint-status":
+        status = checkpoint_status(args.exp_dir, args.stage, args.node_id)
+        print(json.dumps(status, indent=2))
+
+    elif args.command == "list-incomplete":
+        incomplete = list_incomplete_checkpoints(args.exp_dir, args.stage)
+        print(json.dumps(incomplete, indent=2))
+
+    elif args.command == "save-checkpoint":
+        if args.from_file:
+            data = Path(args.from_file).read_text()
+        else:
+            data = sys.stdin.read()
+        if args.step == "metrics" or args.step == "plots":
+            data = json.loads(data) if data.strip() else {}
+        path = save_checkpoint(args.exp_dir, args.stage, args.node_id, args.step, data)
+        print(json.dumps({"saved": path}))
+
+    elif args.command == "load-checkpoint":
+        data = load_checkpoint(args.exp_dir, args.stage, args.node_id, args.step)
+        if data is None:
+            print(json.dumps({"exists": False}))
+            sys.exit(1)
+        if args.step in ("metrics", "plots"):
+            print(json.dumps(data, indent=2))
+        else:
+            print(data)
+
+    elif args.command == "error-analysis":
+        try:
+            from tools.error_classifier import analyze_journal
+        except ImportError:
+            print(json.dumps({"error": "error_classifier module not available"}))
+            sys.exit(1)
+        journal = load_journal(args.exp_dir, args.stage)
+        analysis = analyze_journal(journal)
+        print(json.dumps(analysis, indent=2))
 
     elif args.command == "test":
         print("Running self-test...")

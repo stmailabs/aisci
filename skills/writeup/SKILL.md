@@ -43,6 +43,24 @@ print(json.dumps(state, indent=2))
 
 Read the best experiment code from the final completed stage. Read stage summaries and journal data for all stages to understand the full experimental narrative.
 
+**Load aggregated multi-seed statistics** — critical for reporting results with proper error bars:
+```bash
+for stage in stage1_initial stage2_baseline stage3_creative stage4_ablation; do
+    if [ -f <exp_dir>/state/$stage/seed_aggregate.json ]; then
+        echo "=== $stage ==="
+        cat <exp_dir>/state/$stage/seed_aggregate.json
+    fi
+done
+```
+
+Each aggregate contains `mean`, `std`, `ci_95_low`, `ci_95_high`, and a `stable` flag. **Use these aggregated values in the paper, not single-run metrics.**
+
+**Rules for reporting metrics**:
+- If `seed_aggregate.json` exists and `stable: true`: report as `<mean> ± <std>` (e.g., "89.1% ± 1.2%")
+- If `stable: false`: report the range [min, max] and include a note about variance in limitations
+- If no aggregate available (single run): report the value but explicitly flag it as "single-seed" in limitations
+- Always include 95% CI in tables when space permits
+
 ### 2. Setup LaTeX Directory
 
 ```bash

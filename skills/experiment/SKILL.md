@@ -152,7 +152,24 @@ When a stage completes, run the best node's code with multiple random seeds to v
    fi
    ```
 
-3. Collect and compare metrics across seeds.
+3. **Collect and aggregate metrics across seeds** using the stats tool:
+   ```bash
+   # Parse each seed's output into a metric value
+   for seed in 42 123 456; do
+       uv run aisci-metrics <exp_dir>/logs/seed_${seed}_output.txt --json
+   done
+   # Collect the values and aggregate:
+   uv run aisci-stats aggregate <v1> <v2> <v3>
+   ```
+
+   The aggregate output includes: mean, std, 95% CI, min/max, and a `stable` flag. **If `stable` is false** (std/mean > 5%), the result is unreliable — warn the user and consider running 2 more seeds (789, 101) for a total of 5.
+
+   Save the aggregate to `<exp_dir>/state/<stage>/seed_aggregate.json` for the writeup phase:
+   ```bash
+   uv run aisci-stats aggregate <v1> <v2> <v3> > <exp_dir>/state/<stage>/seed_aggregate.json
+   ```
+
+   The writeup will read this file and report metrics with error bars (e.g., "89.1% ± 1.2%"), not single-point estimates.
 
 #### d. Stage Transition
 
@@ -247,13 +264,26 @@ This step typically adds 1-3 minutes per stage transition but can prevent wasted
 - `octopus.rescue_on_stuck` is `false` in config
 - The claude-octopus plugin is not installed (check same as stage-gate step f.1)
 
-If Stage 1 has used 80%+ of `stage1_max_iters` with zero good nodes, delegate diagnosis to Octopus:
+**Auto-rescue trigger**: After every iteration batch (not just at 80%), run error pattern analysis. Rescue if **≥50% of nodes have the same error type** AND at least 3 buggy nodes exist. This catches patterns early instead of waiting for the pipeline to waste 80% of iterations.
+
+```bash
+uv run aisci-state error-analysis <exp_dir> <current_stage>
+```
+
+This returns JSON with:
+- `error_distribution`: count per error category (CUDA_OOM, SHAPE_MISMATCH, etc.)
+- `dominant_error`: the most common error type
+- `dominant_pct`: fraction of nodes hitting it (0.0-1.0)
+- `recommendation`: a concrete fix suggestion
+
+**Trigger rescue if**: `dominant_pct >= 0.5` AND `total_nodes >= 3`. The legacy 80% threshold still applies as a backstop (rescue even if errors are scattered).
 
 1. **Collect recent error information**:
    ```bash
-   uv run aisci-state journal-summary <exp_dir> stage1_initial
+   uv run aisci-state journal-summary <exp_dir> <current_stage>
+   uv run aisci-state error-analysis <exp_dir> <current_stage>
    ```
-   Note the total nodes and buggy count.
+   Note the total nodes, buggy count, and error classification.
 
    Then get error details from recent buggy nodes. Read the stage journal to find node IDs:
    ```bash
