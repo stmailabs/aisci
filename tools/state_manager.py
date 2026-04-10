@@ -667,15 +667,45 @@ def code_similarity(a: str, b: str) -> float:
 # ── Checkpointing (atomic per-node state) ────────────────────────────────────
 
 
+def _safe_node_id(node_id: str) -> str:
+    """Sanitize node_id to prevent path traversal. Only allow safe chars."""
+    if not node_id or ".." in node_id or "/" in node_id or "\\" in node_id:
+        raise ValueError(f"Invalid node_id: {node_id!r}")
+    return node_id
+
+
 def _checkpoint_dir(exp_dir: str, stage: str, node_id: str) -> Path:
     """Get the checkpoint directory for a node."""
+    node_id = _safe_node_id(node_id)
     d = Path(exp_dir) / "state" / stage / "checkpoints" / node_id
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
+def _atomic_write_text(path: Path, content: str) -> None:
+    """Atomic write: write to temp file in same directory, then rename.
+
+    Prevents partial/corrupted files from concurrent writers (parallel BFTS workers).
+    """
+    import tempfile
+    # Use same directory so rename is atomic (same filesystem)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=".tmp_" + path.name)
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(content)
+        os.replace(tmp, path)  # atomic on POSIX + Windows
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
 def save_checkpoint(exp_dir: str, stage: str, node_id: str, step: str, data: Any) -> str:
     """Save a checkpoint for a specific step of a node's lifecycle.
+
+    Writes are atomic — safe for concurrent parallel BFTS workers.
 
     Steps:
       - "code"    → generated code (str)
@@ -689,19 +719,19 @@ def save_checkpoint(exp_dir: str, stage: str, node_id: str, step: str, data: Any
     d = _checkpoint_dir(exp_dir, stage, node_id)
     if step == "code":
         path = d / "code.py"
-        path.write_text(data if isinstance(data, str) else json.dumps(data))
+        _atomic_write_text(path, data if isinstance(data, str) else json.dumps(data))
     elif step == "exec":
         path = d / "exec.log"
-        path.write_text(data if isinstance(data, str) else json.dumps(data))
+        _atomic_write_text(path, data if isinstance(data, str) else json.dumps(data))
     elif step == "metrics":
         path = d / "metrics.json"
-        path.write_text(json.dumps(data, indent=2))
+        _atomic_write_text(path, json.dumps(data, indent=2))
     elif step == "plots":
         path = d / "plots.json"
-        path.write_text(json.dumps(data, indent=2))
+        _atomic_write_text(path, json.dumps(data, indent=2))
     elif step == "done":
         path = d / "done.marker"
-        path.write_text(datetime.now(timezone.utc).isoformat())
+        _atomic_write_text(path, datetime.now(timezone.utc).isoformat())
     else:
         raise ValueError(f"Unknown checkpoint step: {step}")
     return str(path)

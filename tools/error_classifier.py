@@ -167,6 +167,9 @@ def classify_error(error_text: str) -> str:
     """
     if not error_text:
         return "UNKNOWN"
+    # Accept bytes defensively (subprocess stderr is often bytes)
+    if isinstance(error_text, bytes):
+        error_text = error_text.decode("utf-8", errors="replace")
 
     for category, patterns in ERROR_PATTERNS:
         for pattern in patterns:
@@ -183,21 +186,30 @@ def classify_node(node: dict) -> str:
     if not node.get("is_buggy"):
         return "NOT_BUGGY"
 
+    def _as_str(x: Any) -> str:
+        """Convert anything to a string, decoding bytes safely."""
+        if x is None:
+            return ""
+        if isinstance(x, bytes):
+            return x.decode("utf-8", errors="replace")
+        return str(x)
+
     parts = []
     if node.get("exc_type"):
-        parts.append(str(node["exc_type"]))
+        parts.append(_as_str(node["exc_type"]))
     if node.get("exc_info"):
-        parts.append(str(node["exc_info"])[:1000])
+        parts.append(_as_str(node["exc_info"])[:1000])
 
     term_out = node.get("term_out", [])
     if isinstance(term_out, list):
-        parts.extend(term_out[-30:])  # last 30 lines
-    elif isinstance(term_out, str):
-        parts.append("\n".join(term_out.strip().split("\n")[-30:]))
+        parts.extend(_as_str(line) for line in term_out[-30:])
+    elif isinstance(term_out, (str, bytes)):
+        s = _as_str(term_out)
+        parts.append("\n".join(s.strip().split("\n")[-30:]))
 
     analysis = node.get("analysis", "")
     if analysis:
-        parts.append(str(analysis)[:500])
+        parts.append(_as_str(analysis)[:500])
 
     text = "\n".join(parts)
     return classify_error(text)
